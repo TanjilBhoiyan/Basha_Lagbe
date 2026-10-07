@@ -1,20 +1,14 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-import { isSlotAvailable } from '@/features/visit/visitSlots';
+import { displayStatus, isActiveVisit, tabOf, type VisitTab } from '@/features/visit/visitStatus';
+import { isSlotAvailable, slotStart } from '@/features/visit/visitSlots';
+import { seedVisits } from '@/mocks/visits';
 import type { Result } from '@/types/auth';
 import type { VisitRequest } from '@/types/visit';
 
 const VISITS_KEY = 'basha-lagbe:visit-requests';
+const SEEDED_KEY = 'basha-lagbe:visit-requests-seeded';
 const delay = (ms = 800) => new Promise((resolve) => setTimeout(resolve, ms));
-
-async function readAll(): Promise<VisitRequest[]> {
-  try {
-    const raw = await AsyncStorage.getItem(VISITS_KEY);
-    return raw ? (JSON.parse(raw) as VisitRequest[]) : [];
-  } catch {
-    return [];
-  }
-}
 
 async function writeAll(list: VisitRequest[]) {
   try {
@@ -24,14 +18,42 @@ async function writeAll(list: VisitRequest[]) {
   }
 }
 
-const isActive = (v: VisitRequest) => v.status === 'pending' || v.status === 'confirmed';
+async function readAll(): Promise<VisitRequest[]> {
+  try {
+    const raw = await AsyncStorage.getItem(VISITS_KEY);
+    let list = raw ? (JSON.parse(raw) as VisitRequest[]) : [];
+    // MOCK: add sample requests once (skipping properties the user already requested).
+    if (!(await AsyncStorage.getItem(SEEDED_KEY))) {
+      const seeds = seedVisits().filter((s) => !list.some((v) => v.propertyId === s.propertyId));
+      list = [...list, ...seeds];
+      await writeAll(list);
+      await AsyncStorage.setItem(SEEDED_KEY, '1');
+    }
+    return list;
+  } catch {
+    return [];
+  }
+}
 
 // MOCK service — will call the backend API later (which also notifies the owner).
 export const visitService = {
-  /** The tenant's open (pending / confirmed) request for this property, if any. */
+  /** The tenant's open (pending / confirmed, still ahead) request for this property, if any. */
   async getActiveForProperty(propertyId: string): Promise<VisitRequest | null> {
     const list = await readAll();
-    return list.find((v) => v.propertyId === propertyId && isActive(v)) ?? null;
+    return list.find((v) => v.propertyId === propertyId && isActiveVisit(v)) ?? null;
+  },
+
+  /** All requests grouped by tab: pending & upcoming soonest first, past newest first. */
+  async getGrouped(): Promise<Record<VisitTab, VisitRequest[]>> {
+    await delay(500);
+    const list = await readAll();
+    const groups: Record<VisitTab, VisitRequest[]> = { pending: [], upcoming: [], past: [] };
+    list.forEach((v) => groups[tabOf(displayStatus(v))].push(v));
+    const time = (v: VisitRequest) => slotStart(v.date, v.time).getTime();
+    groups.pending.sort((a, b) => time(a) - time(b));
+    groups.upcoming.sort((a, b) => time(a) - time(b));
+    groups.past.sort((a, b) => time(b) - time(a));
+    return groups;
   },
 
   /**
@@ -49,7 +71,7 @@ export const visitService = {
       return { ok: false, error: 'This time is no longer available. Please pick another slot.' };
     }
     const list = await readAll();
-    const existing = list.find((v) => v.propertyId === input.propertyId && isActive(v));
+    const existing = list.find((v) => v.propertyId === input.propertyId && isActiveVisit(v));
     if (existing?.status === 'confirmed') {
       return { ok: false, error: 'Your visit is already confirmed by the owner.' };
     }

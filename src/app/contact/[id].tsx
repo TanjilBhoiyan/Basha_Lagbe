@@ -159,6 +159,10 @@ export default function ContactVisitScreen() {
     Alert.alert(
       wasUpdate ? 'Visit request updated' : 'Visit request sent',
       `${property.owner.name} will be notified about your visit on ${formatVisitDate(date)} at ${formatTimeSlot(time)}.`,
+      [
+        { text: 'View my requests', onPress: () => router.push('/visits') },
+        { text: 'OK', style: 'cancel' },
+      ],
     );
   };
 

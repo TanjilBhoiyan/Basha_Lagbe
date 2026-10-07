@@ -34,6 +34,7 @@ export default function ProfileScreen() {
       message={user ? `+880${user.phone} · ${user.email}` : 'Profile details coming soon.'}
     >
       <View style={styles.actions}>
+        <Button title="My Visit Requests" variant="secondary" onPress={() => router.push('/visits')} />
         <Button title="Logout" variant="outline" onPress={logout} />
         <Button title="Reset everything (dev)" variant="danger" onPress={resetAll} />
         <AppText variant="caption" color="textMuted" align="center">
