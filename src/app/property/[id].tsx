@@ -22,6 +22,8 @@ import { propertyService } from '@/services/propertyService';
 import { colors, radius, SCREEN_PADDING, spacing } from '@/theme';
 import type { Property } from '@/types/property';
 import { floorLabel, formatBdNumber, formatTaka, plural } from '@/utils/format';
+import { chatService } from '@/services/chatService';
+
 
 type IoniconName = ComponentProps<typeof Ionicons>['name'];
 
@@ -239,7 +241,9 @@ export default function PropertyDetailsScreen() {
           icon="chatbubble-ellipses"
           label="Message"
           flex={1.25}
-          onPress={() => comingSoon('Messaging')}
+          onPress={() =>
+            router.push({ pathname: '/chat/[id]', params: { id: chatService.conversationIdFor(property.id) } })
+          }
         />
         <ActionButton
           icon="calendar-outline"

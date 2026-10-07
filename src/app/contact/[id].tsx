@@ -32,6 +32,9 @@ import { visitService } from '@/services/visitService';
 import { colors, radius, SCREEN_PADDING, spacing } from '@/theme';
 import type { Property, PropertyType } from '@/types/property';
 import type { VisitRequest } from '@/types/visit';
+import { chatService } from '@/services/chatService';
+
+
 
 const MESSAGE_MAX = 500;
 
@@ -131,7 +134,7 @@ export default function ContactVisitScreen() {
 
   const callOwner = () => Linking.openURL(`tel:+880${property.owner.phone}`);
   const openChat = () =>
-    Alert.alert('Coming soon', 'Messaging will be available in the next step.');
+    router.push({ pathname: '/chat/[id]', params: { id: chatService.conversationIdFor(property.id) } });
 
   const send = async () => {
     if (!date || !time) {
