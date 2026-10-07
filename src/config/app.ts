@@ -5,6 +5,7 @@
 export const APP_CONFIG = {
   name: 'Basha Lagbe',
   tagline: 'Find Your Perfect Home in Bangladesh',
+  shortTagline: 'Find Your Next Home',
   currency: {
     code: 'BDT',
     symbol: '৳',

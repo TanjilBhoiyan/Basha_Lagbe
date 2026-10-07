@@ -1,7 +1,9 @@
+import type { ReactNode } from 'react';
 import {
   ActivityIndicator,
   Pressable,
   StyleSheet,
+  View,
   type PressableProps,
   type StyleProp,
   type ViewStyle,
@@ -17,6 +19,8 @@ type ButtonProps = Omit<PressableProps, 'style' | 'children'> & {
   variant?: ButtonVariant;
   loading?: boolean;
   fullWidth?: boolean;
+  /** Optional icon shown after the title, e.g. an arrow. */
+  rightIcon?: ReactNode;
   style?: StyleProp<ViewStyle>;
 };
 
@@ -26,6 +30,7 @@ export function Button({
   loading = false,
   disabled,
   fullWidth = true,
+  rightIcon,
   style,
   ...rest
 }: ButtonProps) {
@@ -51,9 +56,12 @@ export function Button({
       {loading ? (
         <ActivityIndicator color={v.text} />
       ) : (
-        <AppText variant="bodyBold" style={{ color: v.text }}>
-          {title}
-        </AppText>
+        <View style={styles.content}>
+          <AppText variant="bodyBold" style={{ color: v.text }}>
+            {title}
+          </AppText>
+          {rightIcon}
+        </View>
       )}
     </Pressable>
   );
@@ -75,6 +83,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  content: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   fullWidth: { alignSelf: 'stretch' },
   pressed: { opacity: 0.85 },
   disabled: { opacity: 0.5 },
