@@ -7,3 +7,7 @@ export { PasswordInput } from './PasswordInput';
 export { SegmentedTabs } from './SegmentedTabs';
 export { TextDivider } from './TextDivider';
 export { FormError } from './FormError';
+export { SearchField } from './SearchField';
+export { SectionHeader } from './SectionHeader';
+export { EmptyState } from './EmptyState';
+export { ComingSoon } from './ComingSoon';

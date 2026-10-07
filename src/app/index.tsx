@@ -4,6 +4,7 @@ import { Animated, Image, StyleSheet, useWindowDimensions, View } from 'react-na
 
 import { AppText } from '@/components/ui';
 import { APP_CONFIG } from '@/config/app';
+import { goToAppHome } from '@/services/navigation';
 import { onboardingStorage } from '@/services/onboardingStorage';
 import { session } from '@/services/session';
 import { colors, spacing } from '@/theme';
@@ -32,8 +33,7 @@ export default function SplashScreen() {
       const [user, onboardingDone] = await stateReady;
       if (cancelled) return;
       if (user) {
-        // TODO: go to Home once it exists.
-        router.replace('/ui-preview');
+        await goToAppHome();
       } else {
         router.replace(onboardingDone ? '/login' : '/onboarding');
       }

@@ -15,6 +15,7 @@ import {
   TextDivider,
 } from '@/components/ui';
 import { authService } from '@/services/authService';
+import { goToAppHome } from '@/services/navigation';
 import { session } from '@/services/session';
 import { colors, spacing } from '@/theme';
 import type { LoginMethod } from '@/types/auth';
@@ -49,8 +50,7 @@ export default function LoginScreen() {
       return;
     }
     await session.save(result.data);
-    // TODO: go to Home once it exists.
-    router.replace('/ui-preview');
+    await goToAppHome();
   };
 
   const handleGoogle = () => {

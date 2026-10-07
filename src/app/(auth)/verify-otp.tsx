@@ -23,6 +23,7 @@ import {
   OTP_RESEND_SECONDS,
 } from '@/services/authService';
 import { session } from '@/services/session';
+import { goToAppHome } from '@/services/navigation';
 import { colors, SCREEN_PADDING, spacing } from '@/theme';
 import type { OtpPurpose } from '@/types/auth';
 import { maskBdPhone } from '@/utils/validation';
@@ -70,8 +71,7 @@ export default function VerifyOtpScreen() {
 
     if (purpose === 'register' && result.data) {
       await session.save(result.data);
-      // TODO: go to Home once it exists.
-      router.replace('/ui-preview');
+      await goToAppHome();
     } else {
       router.replace({ pathname: '/reset-password', params: { phone } });
     }
