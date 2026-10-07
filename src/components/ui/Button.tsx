@@ -12,13 +12,15 @@ import {
 import { colors, radius, spacing } from '@/theme';
 import { AppText } from './AppText';
 
-type ButtonVariant = 'primary' | 'outline' | 'ghost' | 'danger';
+type ButtonVariant = 'primary' | 'secondary' | 'outline' | 'ghost' | 'danger';
 
 type ButtonProps = Omit<PressableProps, 'style' | 'children'> & {
   title: string;
   variant?: ButtonVariant;
   loading?: boolean;
   fullWidth?: boolean;
+  /** Optional icon shown before the title, e.g. a brand logo. */
+  leftIcon?: ReactNode;
   /** Optional icon shown after the title, e.g. an arrow. */
   rightIcon?: ReactNode;
   style?: StyleProp<ViewStyle>;
@@ -30,6 +32,7 @@ export function Button({
   loading = false,
   disabled,
   fullWidth = true,
+  leftIcon,
   rightIcon,
   style,
   ...rest
@@ -57,6 +60,7 @@ export function Button({
         <ActivityIndicator color={v.text} />
       ) : (
         <View style={styles.content}>
+          {leftIcon}
           <AppText variant="bodyBold" style={{ color: v.text }}>
             {title}
           </AppText>
@@ -69,6 +73,7 @@ export function Button({
 
 const VARIANTS: Record<ButtonVariant, { bg: string; border: string; text: string }> = {
   primary: { bg: colors.primary, border: colors.primary, text: colors.white },
+  secondary: { bg: colors.white, border: colors.border, text: colors.text },
   outline: { bg: colors.white, border: colors.primary, text: colors.primary },
   ghost: { bg: 'transparent', border: 'transparent', text: colors.primary },
   danger: { bg: colors.danger, border: colors.danger, text: colors.white },

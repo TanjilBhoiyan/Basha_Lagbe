@@ -1,35 +1,45 @@
 import { router } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { AppText, Button, Input } from '@/components/ui';
 import { APP_CONFIG } from '@/config/app';
 import { onboardingStorage } from '@/services/onboardingStorage';
+import { session } from '@/services/session';
 import { colors, SCREEN_PADDING, spacing } from '@/theme';
+import type { User } from '@/types/auth';
 
 /**
- * Temporary UI-kit preview to verify the theme on the emulator.
- * Will be replaced by the login screen later.
+ * Temporary screen shown after login until Home is built.
+ * Also holds developer tools for testing the auth/onboarding flows.
  */
 export default function UiPreviewScreen() {
+  const [user, setUser] = useState<User | null>(null);
   const [phone, setPhone] = useState('');
-  const [loading, setLoading] = useState(false);
 
-  const phoneError = phone.length > 0 && !/^1[3-9]\d{8}$/.test(phone)
-    ? 'Enter a valid number, e.g. 1712345678'
-    : undefined;
+  useEffect(() => {
+    session.getUser().then(setUser);
+  }, []);
 
-  const handleSubmit = () => {
-    setLoading(true);
-    setTimeout(() => setLoading(false), 1500);
+  const logout = async () => {
+    await session.clear();
+    router.replace('/login');
+  };
+
+  const resetAll = async () => {
+    await session.clear();
+    await onboardingStorage.reset();
+    router.replace('/');
   };
 
   return (
     <SafeAreaView style={styles.safe}>
       <ScrollView contentContainerStyle={styles.container}>
         <AppText variant="h1" color="primary">{APP_CONFIG.name}</AppText>
-        <AppText color="textSecondary">{APP_CONFIG.tagline}</AppText>
+        <AppText color="textSecondary">
+          {user ? `Logged in as ${user.fullName} (+880${user.phone})` : 'Not logged in'}
+        </AppText>
 
         <View style={styles.section}>
           <AppText variant="h3">Typography</AppText>
@@ -38,41 +48,22 @@ export default function UiPreviewScreen() {
           <AppText variant="bodyBold" color="primary">
             {APP_CONFIG.currency.symbol}25,000/month
           </AppText>
-          <AppText variant="caption" color="textSecondary">Caption text</AppText>
         </View>
 
         <View style={styles.section}>
           <AppText variant="h3">Input</AppText>
           <Input
-            label="Phone Number"
-            placeholder="1XXXXXXXXX"
-            keyboardType="phone-pad"
-            maxLength={10}
+            label="Sample input"
+            placeholder="Type something"
             value={phone}
             onChangeText={setPhone}
-            error={phoneError}
-            prefix={<AppText color="textSecondary">+880</AppText>}
           />
-        </View>
-
-        <View style={styles.section}>
-          <AppText variant="h3">Buttons</AppText>
-          <Button title="Primary Button" loading={loading} onPress={handleSubmit} />
-          <Button title="Outline Button" variant="outline" />
-          <Button title="Ghost Button" variant="ghost" />
-          <Button title="Disabled Button" disabled />
         </View>
 
         <View style={styles.section}>
           <AppText variant="h3">Developer</AppText>
-          <Button
-            title="Reset onboarding & restart"
-            variant="danger"
-            onPress={async () => {
-              await onboardingStorage.reset();
-              router.replace('/');
-            }}
-          />
+          <Button title="Logout" variant="outline" onPress={logout} />
+          <Button title="Reset everything & restart" variant="danger" onPress={resetAll} />
         </View>
       </ScrollView>
     </SafeAreaView>

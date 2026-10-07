@@ -5,7 +5,9 @@ import { Animated, Image, StyleSheet, useWindowDimensions, View } from 'react-na
 import { AppText } from '@/components/ui';
 import { APP_CONFIG } from '@/config/app';
 import { onboardingStorage } from '@/services/onboardingStorage';
+import { session } from '@/services/session';
 import { colors, spacing } from '@/theme';
+
 const SPLASH_DURATION_MS = 2200;
 const CITY_ASPECT_RATIO = 1080 / 855;
 
@@ -23,14 +25,18 @@ export default function SplashScreen() {
       Animated.spring(scale, { toValue: 1, friction: 6, useNativeDriver: true }),
     ]).start();
 
-    // Read the onboarding flag while the splash is showing, then route.
-    const onboardingDone = onboardingStorage.isComplete();
+    // Read stored state while the splash is showing, then route.
+    const stateReady = Promise.all([session.getUser(), onboardingStorage.isComplete()]);
     let cancelled = false;
     const timer = setTimeout(async () => {
-      const done = await onboardingDone;
+      const [user, onboardingDone] = await stateReady;
       if (cancelled) return;
-      // TODO: send returning users to login/home once those screens exist.
-      router.replace(done ? '/ui-preview' : '/onboarding');
+      if (user) {
+        // TODO: go to Home once it exists.
+        router.replace('/ui-preview');
+      } else {
+        router.replace(onboardingDone ? '/login' : '/onboarding');
+      }
     }, SPLASH_DURATION_MS);
 
     return () => {

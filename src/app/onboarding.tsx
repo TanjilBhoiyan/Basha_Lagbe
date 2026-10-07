@@ -37,8 +37,7 @@ export default function OnboardingScreen() {
     if (finishing) return;
     setFinishing(true);
     await onboardingStorage.markComplete();
-    // TODO: replace with the login screen once it exists.
-    router.replace('/ui-preview');
+    router.replace('/login');
   };
 
   const handleNext = () => {
