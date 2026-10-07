@@ -132,7 +132,12 @@ export default function PropertyDetailsScreen() {
   return (
     <View style={styles.screen}>
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-        <PhotoGallery images={property.images} width={width} height={width * 0.72} />
+        <PhotoGallery
+          images={property.images}
+          width={width}
+          height={width * 0.72}
+          onOpenGallery={() => router.push({ pathname: '/gallery/[id]', params: { id: property.id } })}
+        />
 
         <View style={styles.body}>
           <View style={styles.titleRow}>

@@ -18,10 +18,12 @@ type Props = {
   images: ImageSourcePropType[];
   width: number;
   height: number;
+  /** Tapping a photo or the counter opens the full gallery. */
+  onOpenGallery?: () => void;
 };
 
 /** Swipeable photos with a "1 / N" counter and a tappable thumbnail strip. */
-export function PhotoGallery({ images, width, height }: Props) {
+export function PhotoGallery({ images, width, height, onOpenGallery }: Props) {
   const listRef = useRef<FlatList<ImageSourcePropType>>(null);
   const thumbsRef = useRef<FlatList<ImageSourcePropType>>(null);
   const [index, setIndex] = useState(0);
@@ -51,15 +53,22 @@ export function PhotoGallery({ images, width, height }: Props) {
           onMomentumScrollEnd={onMomentumEnd}
           getItemLayout={(_, i) => ({ length: width, offset: width * i, index: i })}
           renderItem={({ item }) => (
-            <Image source={item} style={{ width, height }} resizeMode="cover" />
+            <Pressable onPress={onOpenGallery} accessibilityLabel="Open gallery">
+              <Image source={item} style={{ width, height }} resizeMode="cover" />
+            </Pressable>
           )}
         />
-        <View style={styles.counter} accessibilityLabel={`Photo ${index + 1} of ${images.length}`}>
+        <Pressable
+          onPress={onOpenGallery}
+          style={styles.counter}
+          accessibilityRole="button"
+          accessibilityLabel={`Photo ${index + 1} of ${images.length}. Open gallery`}
+        >
           <Ionicons name="images-outline" size={16} color={colors.white} />
           <AppText variant="caption" style={styles.counterText}>
             {index + 1} / {images.length}
           </AppText>
-        </View>
+        </Pressable>
       </View>
 
       {images.length > 1 ? (

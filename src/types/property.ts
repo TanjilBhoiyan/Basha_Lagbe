@@ -56,6 +56,8 @@ export type Property = {
   /** ISO date (YYYY-MM-DD) the property can be moved into. */
   availableFrom: string;
   images: ImageSourcePropType[];
+    /** Optional property tour (uploaded video or YouTube link). */
+  videoUrl?: string;
   isVerified: boolean;
   owner: PropertyOwner;
 };
