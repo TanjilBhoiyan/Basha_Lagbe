@@ -1,13 +1,13 @@
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { Alert, Linking, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { BrandHeader } from '@/components/brand/BrandHeader';
 import { AppText } from '@/components/ui';
-import { APP_CONFIG } from '@/config/app';
 import { initials } from '@/features/property/OwnerAvatar';
+import { comingSoon, confirmLogout, openSupport } from '@/features/profile/accountActions';
 import { ProfileMenuItem } from '@/features/profile/ProfileMenuItem';
 import { locationService } from '@/services/locationService';
 import { onboardingStorage } from '@/services/onboardingStorage';
@@ -15,9 +15,6 @@ import { session } from '@/services/session';
 import { colors, radius, SCREEN_PADDING, spacing } from '@/theme';
 import type { User } from '@/types/auth';
 import { formatBdPhone } from '@/utils/validation';
-
-const comingSoon = (feature: string) =>
-  Alert.alert('Coming soon', `${feature} will be available in a later step.`);
 
 export default function ProfileScreen() {
   const [user, setUser] = useState<User | null>(null);
@@ -27,35 +24,6 @@ export default function ProfileScreen() {
       session.getUser().then(setUser);
     }, []),
   );
-
-  const logout = () =>
-    Alert.alert('Log out?', 'You will need to log in again to use your account.', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Log out',
-        style: 'destructive',
-        onPress: async () => {
-          await session.clear();
-          router.replace('/login');
-        },
-      },
-    ]);
-
-  const openSupport = () => {
-    const options: { text: string; style?: 'cancel'; onPress?: () => void }[] = [];
-    if (APP_CONFIG.supportPhone) {
-      options.push({ text: 'Call support', onPress: () => Linking.openURL(`tel:${APP_CONFIG.supportPhone}`) });
-    }
-    if (APP_CONFIG.supportEmail) {
-      options.push({ text: 'Email support', onPress: () => Linking.openURL(`mailto:${APP_CONFIG.supportEmail}`) });
-    }
-    if (!options.length) {
-      comingSoon('Help & Support');
-      return;
-    }
-    options.push({ text: 'Cancel', style: 'cancel' });
-    Alert.alert('Help & Support', 'How would you like to reach us?', options);
-  };
 
   /** Developer helper: wipes all local state so every flow can be tested again. */
   const resetAll = async () => {
@@ -148,7 +116,8 @@ export default function ProfileScreen() {
           <ProfileMenuItem icon="heart" label="Saved Properties" onPress={() => router.push('/saved')} />
           <ProfileMenuItem icon="star" label="My Reviews" onPress={() => comingSoon('Reviews')} />
           <ProfileMenuItem icon="headset" label="Help & Support" onPress={openSupport} />
-          <ProfileMenuItem icon="logout" label="Logout" danger onPress={logout} />
+          <ProfileMenuItem icon="cog" label="Settings & More" onPress={() => router.push('/settings')} />
+          <ProfileMenuItem icon="logout" label="Logout" danger onPress={confirmLogout} />
         </View>
 
         {__DEV__ ? (
