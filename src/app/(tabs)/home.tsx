@@ -17,19 +17,20 @@ import { FilterChips } from '@/features/home/FilterChips';
 import { HomeHeader } from '@/features/home/HomeHeader';
 import { PropertyCard } from '@/features/home/PropertyCard';
 import { PropertyCardSkeleton } from '@/features/home/PropertyCardSkeleton';
+import { activeFilterCount } from '@/features/filters/filters';
+import { useFilters } from '@/features/filters/FiltersContext';
 import {
   BEDROOM_OPTIONS,
   bedroomChipLabel,
+  matchPricePreset,
   PRICE_OPTIONS,
   priceChipLabel,
-  type BedroomFilter,
-  type PriceRange,
 } from '@/features/home/quickFilters';
 import { locationService } from '@/services/locationService';
 import { propertyService } from '@/services/propertyService';
 import { colors, SCREEN_PADDING, spacing } from '@/theme';
 import { locationLabel, type Location } from '@/types/location';
-import type { Property, PropertyType } from '@/types/property';
+import type { Property } from '@/types/property';
 
 export default function HomeScreen() {
   const { width } = useWindowDimensions();
@@ -37,9 +38,7 @@ export default function HomeScreen() {
 
   const [location, setLocation] = useState<Location | null>(null);
   const [areas, setAreas] = useState<Location[]>([]);
-  const [category, setCategory] = useState<PropertyType | null>(null);
-  const [price, setPrice] = useState<PriceRange>(null);
-  const [bedrooms, setBedrooms] = useState<BedroomFilter>(null);
+  const { filters, updateFilters, resetFilters } = useFilters();
   const [openSheet, setOpenSheet] = useState<'price' | 'bedrooms' | null>(null);
   const [properties, setProperties] = useState<Property[]>([]);
   const [favorites, setFavorites] = useState<string[]>([]);
@@ -60,24 +59,13 @@ export default function HomeScreen() {
   }, []);
 
   const loadProperties = useCallback(async () => {
-    const list = await propertyService.getRecommended({
-      locationId: location?.id,
-      type: category ?? undefined,
-      minRent: price?.min,
-      maxRent: price?.max,
-      bedrooms: bedrooms ?? undefined,
-    });
+    const list = await propertyService.getRecommended({ locationId: location?.id, filters });
     setProperties(list);
-  }, [location?.id, category, price, bedrooms]);
+  }, [location?.id, filters]);
 
-  const clearFilters = () => {
-    setCategory(null);
-    setPrice(null);
-    setBedrooms(null);
-  };
-
-  const openFullFilters = () =>
-    router.push({ pathname: '/search', params: { filters: 'open' } });
+  const openFullFilters = () => router.push('/filters');
+  const filterCount = activeFilterCount(filters);
+  const isPriceSet = filters.minRent > 0 || filters.maxRent !== null;
 
   useEffect(() => {
     setLoading(true);
@@ -126,31 +114,37 @@ export default function HomeScreen() {
           />
 
           <CategoryGrid
-            selected={category}
+            selected={filters.type}
             onSelect={(c) => {
               if (c.type === null) {
                 comingSoon('More categories');
                 return;
               }
               // Tapping the active category again clears the filter.
-              setCategory((current) => (current === c.type ? null : c.type));
+              updateFilters({ type: filters.type === c.type ? null : c.type });
             }}
           />
         </View>
 
         <FilterChips
           chips={[
-            { key: 'filters', label: 'Filters', leading: true, active: false, onPress: openFullFilters },
+            {
+              key: 'filters',
+              label: filterCount > 0 ? `Filters (${filterCount})` : 'Filters',
+              leading: true,
+              active: false,
+              onPress: openFullFilters,
+            },
             {
               key: 'price',
-              label: priceChipLabel(price),
-              active: price !== null,
+              label: priceChipLabel(filters),
+              active: isPriceSet,
               onPress: () => setOpenSheet('price'),
             },
             {
               key: 'bedrooms',
-              label: bedroomChipLabel(bedrooms),
-              active: bedrooms !== null,
+              label: bedroomChipLabel(filters.bedrooms),
+              active: filters.bedrooms !== null,
               onPress: () => setOpenSheet('bedrooms'),
             },
             { key: 'more', label: 'More', active: false, onPress: openFullFilters },
@@ -189,9 +183,9 @@ export default function HomeScreen() {
             <EmptyState
               icon="home-outline"
               title="No properties found"
-              message="Try changing the category, price or bedrooms."
+              message="Try changing or clearing your filters."
               actionLabel="Clear filters"
-              onAction={clearFilters}
+              onAction={resetFilters}
             />
           </View>
         ) : (
@@ -218,16 +212,16 @@ export default function HomeScreen() {
         visible={openSheet === 'price'}
         title="Monthly Rent"
         options={PRICE_OPTIONS}
-        value={price}
-        onSelect={setPrice}
+        value={matchPricePreset(filters)}
+        onSelect={(range) => updateFilters(range)}
         onClose={() => setOpenSheet(null)}
       />
       <OptionSheet
         visible={openSheet === 'bedrooms'}
         title="Bedrooms"
         options={BEDROOM_OPTIONS}
-        value={bedrooms}
-        onSelect={setBedrooms}
+        value={filters.bedrooms}
+        onSelect={(bedrooms) => updateFilters({ bedrooms })}
         onClose={() => setOpenSheet(null)}
       />
     </SafeAreaView>

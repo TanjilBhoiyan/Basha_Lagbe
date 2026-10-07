@@ -11,7 +11,8 @@ type Props<T> = {
   visible: boolean;
   title: string;
   options: SheetOption<T>[];
-  value: T;
+  /** Currently selected option value (undefined = none ticked). */
+  value: T | undefined;
   onSelect: (value: T) => void;
   onClose: () => void;
 };

@@ -1,39 +1,31 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
+import { DEFAULT_FILTERS, matchesFilters, type PropertyFilters } from '@/features/filters/filters';
 import { MOCK_PROPERTIES } from '@/mocks/properties';
-import type { Property, PropertyType } from '@/types/property';
+import type { Property } from '@/types/property';
 
 const FAVORITES_KEY = 'basha-lagbe:favorites';
 const delay = (ms = 700) => new Promise((resolve) => setTimeout(resolve, ms));
 
 // MOCK service — will call the backend API later.
 export const propertyService = {
-  /**
-   * Properties in the selected location first, then everything else,
-   * optionally filtered by type, rent range and bedrooms.
-   * `bedrooms: 4` means "4 or more".
-   */
+  /** Matching properties, with the selected location's listings first. */
   async getRecommended(params: {
     locationId?: string;
-    type?: PropertyType;
-    minRent?: number;
-    maxRent?: number;
-    bedrooms?: number;
+    filters?: PropertyFilters;
   }): Promise<Property[]> {
     await delay();
-    const list = MOCK_PROPERTIES.filter((p) => {
-      if (params.type && p.type !== params.type) return false;
-      if (params.minRent !== undefined && p.monthlyRent < params.minRent) return false;
-      if (params.maxRent !== undefined && p.monthlyRent > params.maxRent) return false;
-      if (params.bedrooms !== undefined) {
-        if (params.bedrooms >= 4 ? p.bedrooms < 4 : p.bedrooms !== params.bedrooms) return false;
-      }
-      return true;
-    });
-    return [...list].sort(
+    const filters = params.filters ?? DEFAULT_FILTERS;
+    return MOCK_PROPERTIES.filter((p) => matchesFilters(p, filters)).sort(
       (a, b) =>
         Number(b.locationId === params.locationId) - Number(a.locationId === params.locationId),
     );
+  },
+
+  /** Result count for the "Apply Filters" button. */
+  async count(filters: PropertyFilters): Promise<number> {
+    await delay(150);
+    return MOCK_PROPERTIES.filter((p) => matchesFilters(p, filters)).length;
   },
 
   async getFavoriteIds(): Promise<string[]> {
