@@ -45,19 +45,17 @@ export default function HomeScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
-  // Re-read the selected location whenever Home comes back into focus
-  // (e.g. after changing it on the Select Location screen).
+  // (Favorites are re-read too, so hearts tapped on Search show up here.)
   useFocusEffect(
     useCallback(() => {
       locationService.getSelected().then(setLocation);
+      propertyService.getFavoriteIds().then(setFavorites);
     }, []),
   );
 
   useEffect(() => {
     locationService.getPopular().then(setAreas);
-    propertyService.getFavoriteIds().then(setFavorites);
   }, []);
-
   const loadProperties = useCallback(async () => {
     const list = await propertyService.getRecommended({ locationId: location?.id, filters });
     setProperties(list);
@@ -201,7 +199,7 @@ export default function HomeScreen() {
                 width={cardWidth}
                 isFavorite={favorites.includes(p.id)}
                 onToggleFavorite={() => toggleFavorite(p.id)}
-                onPress={() => comingSoon('Property details')}
+                onPress={() => router.push({ pathname: '/property/[id]', params: { id: p.id } })}
               />
             ))}
           </ScrollView>

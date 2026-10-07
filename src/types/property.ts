@@ -17,6 +17,14 @@ export type Amenity =
   | 'water'
   | 'balcony';
 
+export type PropertyOwner = {
+  name: string;
+  phone: string;
+  isVerified: boolean;
+  /** "YYYY-MM" the owner joined. */
+  memberSince: string;
+};
+
 export type Property = {
   id: string;
   title: string;
@@ -24,10 +32,24 @@ export type Property = {
   locationId: string;
   /** Public address only (area + city). The exact address stays private. */
   areaLabel: string;
+  /**
+   * Approximate map position (area level), NOT the exact house.
+   * The exact address is only shared after the owner approves.
+   */
+  latitude: number;
+  longitude: number;
   monthlyRent: number;
+  negotiable: boolean;
+  /** Advance rent the owner asks for, in months (common in Bangladesh). */
+  advanceMonths: number;
+  /** Monthly service charge in BDT (0 = included / none). */
+  serviceCharge: number;
   bedrooms: number;
   bathrooms: number;
   sizeSqft: number;
+  floorNumber: number;
+  totalFloors: number;
+  description: string;
   tenantTypes: TenantType[];
   furnishing: Furnishing;
   amenities: Amenity[];
@@ -35,5 +57,5 @@ export type Property = {
   availableFrom: string;
   images: ImageSourcePropType[];
   isVerified: boolean;
-  owner: { name: string; phone: string };
+  owner: PropertyOwner;
 };

@@ -6,6 +6,9 @@ export type Location = {
   name: string;
   city: string;
   listingCount: number;
+  /** Center of the area, used to position the map. */
+  latitude: number;
+  longitude: number;
   image?: ImageSourcePropType;
 };
 

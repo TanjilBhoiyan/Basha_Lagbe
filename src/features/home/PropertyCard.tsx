@@ -4,7 +4,7 @@ import { Image, Linking, Pressable, StyleSheet, View } from 'react-native';
 import { AppText } from '@/components/ui';
 import { colors, radius, spacing } from '@/theme';
 import type { Property } from '@/types/property';
-import { formatBdNumber, formatTaka } from '@/utils/format';
+import { formatBdNumber, formatTaka, plural } from '@/utils/format';
 
 type Props = {
   property: Property;
@@ -81,9 +81,9 @@ export function PropertyCard({ property, width, isFavorite, onToggleFavorite, on
 
         <View style={styles.specs}>
           {property.bedrooms > 0 ? (
-            <Spec icon="bed-outline" text={`${property.bedrooms} Beds`} />
+            <Spec icon="bed-outline" text={plural(property.bedrooms, 'Bed')} />
           ) : null}
-          <Spec icon="water-outline" text={`${property.bathrooms} Baths`} />
+           <Spec icon="water-outline" text={plural(property.bathrooms, 'Bath')} />
           <Spec icon="resize-outline" text={`${formatBdNumber(property.sizeSqft)} sqft`} />
         </View>
 

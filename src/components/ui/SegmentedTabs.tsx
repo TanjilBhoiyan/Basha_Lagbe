@@ -13,21 +13,29 @@ type Props<T extends string> = {
   tabs: Tab<T>[];
   value: T;
   onChange: (value: T) => void;
+  /** `solid` = filled green active tab with white text (Map / List switch). */
+  variant?: 'soft' | 'solid';
 };
 
-export function SegmentedTabs<T extends string>({ tabs, value, onChange }: Props<T>) {
+export function SegmentedTabs<T extends string>({
+  tabs,
+  value,
+  onChange,
+  variant = 'soft',
+}: Props<T>) {
   return (
     <View style={styles.container} accessibilityRole="tablist">
       {tabs.map((tab) => {
         const active = tab.value === value;
-        const color = active ? colors.primary : colors.textSecondary;
+        const solid = variant === 'solid';
+        const color = active ? (solid ? colors.white : colors.primary) : colors.textSecondary;
         return (
           <Pressable
             key={tab.value}
             onPress={() => onChange(tab.value)}
             accessibilityRole="tab"
             accessibilityState={{ selected: active }}
-            style={[styles.tab, active && styles.activeTab]}
+            style={[styles.tab, active && (solid ? styles.activeSolid : styles.activeTab)]}
           >
             {tab.icon ? <Ionicons name={tab.icon} size={20} color={color} /> : null}
             <AppText variant="bodyBold" style={{ color }}>
@@ -59,4 +67,5 @@ const styles = StyleSheet.create({
     borderRadius: radius.md,
   },
   activeTab: { backgroundColor: colors.primaryLight },
+  activeSolid: { backgroundColor: colors.primaryDeep },
 });
