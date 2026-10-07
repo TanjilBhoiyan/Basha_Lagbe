@@ -11,3 +11,5 @@ export { SearchField } from './SearchField';
 export { SectionHeader } from './SectionHeader';
 export { EmptyState } from './EmptyState';
 export { ComingSoon } from './ComingSoon';
+export { OptionSheet } from './OptionSheet';
+export type { SheetOption } from './OptionSheet';

@@ -10,12 +10,21 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { EmptyState, SearchField, SectionHeader } from '@/components/ui';
+import { EmptyState, OptionSheet, SearchField, SectionHeader } from '@/components/ui';
 import { AreaCard } from '@/features/home/AreaCard';
 import { CategoryGrid } from '@/features/home/CategoryGrid';
+import { FilterChips } from '@/features/home/FilterChips';
 import { HomeHeader } from '@/features/home/HomeHeader';
 import { PropertyCard } from '@/features/home/PropertyCard';
 import { PropertyCardSkeleton } from '@/features/home/PropertyCardSkeleton';
+import {
+  BEDROOM_OPTIONS,
+  bedroomChipLabel,
+  PRICE_OPTIONS,
+  priceChipLabel,
+  type BedroomFilter,
+  type PriceRange,
+} from '@/features/home/quickFilters';
 import { locationService } from '@/services/locationService';
 import { propertyService } from '@/services/propertyService';
 import { colors, SCREEN_PADDING, spacing } from '@/theme';
@@ -29,6 +38,9 @@ export default function HomeScreen() {
   const [location, setLocation] = useState<Location | null>(null);
   const [areas, setAreas] = useState<Location[]>([]);
   const [category, setCategory] = useState<PropertyType | null>(null);
+  const [price, setPrice] = useState<PriceRange>(null);
+  const [bedrooms, setBedrooms] = useState<BedroomFilter>(null);
+  const [openSheet, setOpenSheet] = useState<'price' | 'bedrooms' | null>(null);
   const [properties, setProperties] = useState<Property[]>([]);
   const [favorites, setFavorites] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
@@ -51,9 +63,21 @@ export default function HomeScreen() {
     const list = await propertyService.getRecommended({
       locationId: location?.id,
       type: category ?? undefined,
+      minRent: price?.min,
+      maxRent: price?.max,
+      bedrooms: bedrooms ?? undefined,
     });
     setProperties(list);
-  }, [location?.id, category]);
+  }, [location?.id, category, price, bedrooms]);
+
+  const clearFilters = () => {
+    setCategory(null);
+    setPrice(null);
+    setBedrooms(null);
+  };
+
+  const openFullFilters = () =>
+    router.push({ pathname: '/search', params: { filters: 'open' } });
 
   useEffect(() => {
     setLoading(true);
@@ -98,6 +122,7 @@ export default function HomeScreen() {
           <SearchField
             placeholder="Search area, landmark or property"
             onPress={() => router.push('/search')}
+            onFilterPress={openFullFilters}
           />
 
           <CategoryGrid
@@ -111,7 +136,28 @@ export default function HomeScreen() {
               setCategory((current) => (current === c.type ? null : c.type));
             }}
           />
+        </View>
 
+        <FilterChips
+          chips={[
+            { key: 'filters', label: 'Filters', leading: true, active: false, onPress: openFullFilters },
+            {
+              key: 'price',
+              label: priceChipLabel(price),
+              active: price !== null,
+              onPress: () => setOpenSheet('price'),
+            },
+            {
+              key: 'bedrooms',
+              label: bedroomChipLabel(bedrooms),
+              active: bedrooms !== null,
+              onPress: () => setOpenSheet('bedrooms'),
+            },
+            { key: 'more', label: 'More', active: false, onPress: openFullFilters },
+          ]}
+        />
+
+        <View style={styles.padded}>
           <SectionHeader title="Popular Areas" onSeeAll={() => router.push('/select-location')} />
         </View>
 
@@ -143,9 +189,9 @@ export default function HomeScreen() {
             <EmptyState
               icon="home-outline"
               title="No properties found"
-              message="Try another category or location."
-              actionLabel="Show all"
-              onAction={() => setCategory(null)}
+              message="Try changing the category, price or bedrooms."
+              actionLabel="Clear filters"
+              onAction={clearFilters}
             />
           </View>
         ) : (
@@ -167,6 +213,23 @@ export default function HomeScreen() {
           </ScrollView>
         )}
       </ScrollView>
+
+      <OptionSheet
+        visible={openSheet === 'price'}
+        title="Monthly Rent"
+        options={PRICE_OPTIONS}
+        value={price}
+        onSelect={setPrice}
+        onClose={() => setOpenSheet(null)}
+      />
+      <OptionSheet
+        visible={openSheet === 'bedrooms'}
+        title="Bedrooms"
+        options={BEDROOM_OPTIONS}
+        value={bedrooms}
+        onSelect={setBedrooms}
+        onClose={() => setOpenSheet(null)}
+      />
     </SafeAreaView>
   );
 }

@@ -10,13 +10,26 @@ const delay = (ms = 700) => new Promise((resolve) => setTimeout(resolve, ms));
 export const propertyService = {
   /**
    * Properties in the selected location first, then everything else,
-   * optionally filtered by type.
+   * optionally filtered by type, rent range and bedrooms.
+   * `bedrooms: 4` means "4 or more".
    */
-  async getRecommended(params: { locationId?: string; type?: PropertyType }): Promise<Property[]> {
+  async getRecommended(params: {
+    locationId?: string;
+    type?: PropertyType;
+    minRent?: number;
+    maxRent?: number;
+    bedrooms?: number;
+  }): Promise<Property[]> {
     await delay();
-    const list = params.type
-      ? MOCK_PROPERTIES.filter((p) => p.type === params.type)
-      : MOCK_PROPERTIES;
+    const list = MOCK_PROPERTIES.filter((p) => {
+      if (params.type && p.type !== params.type) return false;
+      if (params.minRent !== undefined && p.monthlyRent < params.minRent) return false;
+      if (params.maxRent !== undefined && p.monthlyRent > params.maxRent) return false;
+      if (params.bedrooms !== undefined) {
+        if (params.bedrooms >= 4 ? p.bedrooms < 4 : p.bedrooms !== params.bedrooms) return false;
+      }
+      return true;
+    });
     return [...list].sort(
       (a, b) =>
         Number(b.locationId === params.locationId) - Number(a.locationId === params.locationId),
