@@ -15,12 +15,7 @@ import {
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppText, EmptyState } from '@/components/ui';
-import {
-  AMENITY_OPTIONS,
-  formatIsoDate,
-  FURNISHING_OPTIONS,
-  TENANT_OPTIONS,
-} from '@/features/filters/filters';
+import { AMENITY_OPTIONS } from '@/features/filters/filters';
 import { OwnerCard } from '@/features/property/OwnerCard';
 import { PhotoGallery } from '@/features/property/PhotoGallery';
 import { propertyService } from '@/services/propertyService';
@@ -29,6 +24,8 @@ import type { Property } from '@/types/property';
 import { floorLabel, formatBdNumber, formatTaka, plural } from '@/utils/format';
 
 type IoniconName = ComponentProps<typeof Ionicons>['name'];
+
+const MAX_AMENITY_CHIPS = 6;
 
 export default function PropertyDetailsScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -99,34 +96,16 @@ export default function PropertyDetailsScreen() {
   const callOwner = () => Linking.openURL(`tel:+880${property.owner.phone}`);
 
   const amenities = AMENITY_OPTIONS.filter((a) => property.amenities.includes(a.value));
-  const furnishing = FURNISHING_OPTIONS.find((f) => f.value === property.furnishing)?.label;
-  const tenants = TENANT_OPTIONS.filter((t) => property.tenantTypes.includes(t.value))
-    .map((t) => t.label.replace('\n', ' '))
-    .join(', ');
+  const previewAmenities = amenities.slice(0, MAX_AMENITY_CHIPS);
+  const hiddenAmenities = amenities.length - previewAmenities.length;
+  const openInfo = () =>
+    router.push({ pathname: '/amenities/[id]', params: { id: property.id } });
 
   const specs: { icon: IoniconName; text: string }[] = [
     ...(property.bedrooms > 0 ? [{ icon: 'bed-outline' as const, text: plural(property.bedrooms, 'Bed') }] : []),
     { icon: 'water-outline', text: plural(property.bathrooms, 'Bath') },
     { icon: 'resize-outline', text: `${formatBdNumber(property.sizeSqft)} sqft` },
     { icon: 'business-outline', text: floorLabel(property.floorNumber) },
-  ];
-
-  const details: { label: string; value: string }[] = [
-    {
-      label: 'Advance',
-      value:
-        property.advanceMonths > 0
-          ? `${plural(property.advanceMonths, 'month')} (${formatTaka(property.monthlyRent * property.advanceMonths)})`
-          : 'None',
-    },
-    {
-      label: 'Service charge',
-      value: property.serviceCharge > 0 ? `${formatTaka(property.serviceCharge)} / month` : 'Included',
-    },
-    { label: 'Available from', value: formatIsoDate(property.availableFrom) },
-    { label: 'Furnishing', value: furnishing ?? '—' },
-    { label: 'Floor', value: `${floorLabel(property.floorNumber)} of ${property.totalFloors}` },
-    { label: 'Suitable for', value: tenants || 'Anyone' },
   ];
 
   return (
@@ -191,32 +170,43 @@ export default function PropertyDetailsScreen() {
             </Pressable>
           ) : null}
 
-          {amenities.length ? (
+          {previewAmenities.length ? (
             <View style={styles.chips}>
-              {amenities.map((a) => (
+              {previewAmenities.map((a) => (
                 <View key={a.value} style={styles.chip}>
                   <MaterialCommunityIcons name={a.icon} size={18} color={colors.primaryDeep} />
                   <AppText variant="caption">{a.label}</AppText>
                 </View>
               ))}
+              {hiddenAmenities > 0 ? (
+                <Pressable onPress={openInfo} style={[styles.chip, styles.moreChip]} accessibilityRole="button">
+                  <AppText variant="caption" color="primaryDeep" style={styles.bold}>
+                    +{hiddenAmenities} more
+                  </AppText>
+                </Pressable>
+              ) : null}
             </View>
           ) : null}
 
           <View style={styles.separator} />
 
-          <AppText variant="h3">Rent Details</AppText>
-          <View style={styles.details}>
-            {details.map((d) => (
-              <View key={d.label} style={styles.detailRow}>
-                <AppText variant="caption" color="textSecondary" style={styles.detailLabel}>
-                  {d.label}
-                </AppText>
-                <AppText variant="caption" style={styles.detailValue}>
-                  {d.value}
-                </AppText>
-              </View>
-            ))}
-          </View>
+          <Pressable
+            onPress={openInfo}
+            style={({ pressed }) => [styles.infoLink, pressed && styles.pressed]}
+            accessibilityRole="button"
+            accessibilityLabel="See amenities and rental information"
+          >
+            <View style={styles.infoLinkIcon}>
+              <MaterialCommunityIcons name="file-document-outline" size={22} color={colors.primaryDeep} />
+            </View>
+            <View style={styles.flex}>
+              <AppText variant="bodyBold">Amenities & Rental Info</AppText>
+              <AppText variant="caption" color="textSecondary">
+                Deposit, advance, service charge, minimum stay
+              </AppText>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
+          </Pressable>
 
           <View style={styles.privacyNote}>
             <Ionicons name="lock-closed-outline" size={16} color={colors.textSecondary} />
@@ -349,21 +339,24 @@ const styles = StyleSheet.create({
     borderRadius: radius.md,
     backgroundColor: colors.primaryLight,
   },
-  details: {
+  moreChip: { borderWidth: 1, borderColor: colors.primary, backgroundColor: colors.white },
+  infoLink: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    padding: spacing.md,
     borderRadius: radius.lg,
     borderWidth: 1,
     borderColor: colors.border,
-    paddingHorizontal: spacing.md,
   },
-  detailRow: {
-    flexDirection: 'row',
-    gap: spacing.md,
-    paddingVertical: spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
+  infoLinkIcon: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: colors.primaryLight,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  detailLabel: { width: 110 },
-  detailValue: { flex: 1, fontWeight: '600', textAlign: 'right' },
   privacyNote: {
     flexDirection: 'row',
     alignItems: 'center',

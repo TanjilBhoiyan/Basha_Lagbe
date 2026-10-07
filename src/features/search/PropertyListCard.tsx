@@ -8,8 +8,8 @@ import { formatBdNumber, formatTaka, plural } from '@/utils/format';
 
 type Props = {
   property: Property;
-  isFavorite: boolean;
-  onToggleFavorite: () => void;
+  isFavorite?: boolean;
+  onToggleFavorite?: () => void;
   onPress: () => void;
   /** Highlights the card (e.g. the one picked on the map). */
   highlighted?: boolean;
@@ -51,18 +51,20 @@ export function PropertyListCard({
           <AppText variant="bodyBold" numberOfLines={2} style={styles.title}>
             {property.title}
           </AppText>
-          <Pressable
-            onPress={onToggleFavorite}
-            hitSlop={10}
-            accessibilityRole="button"
-            accessibilityLabel={isFavorite ? 'Remove from favorites' : 'Save to favorites'}
-          >
-            <Ionicons
-              name={isFavorite ? 'heart' : 'heart-outline'}
-              size={22}
-              color={isFavorite ? colors.favorite : colors.text}
-            />
-          </Pressable>
+          {onToggleFavorite ? (
+            <Pressable
+              onPress={onToggleFavorite}
+              hitSlop={10}
+              accessibilityRole="button"
+              accessibilityLabel={isFavorite ? 'Remove from favorites' : 'Save to favorites'}
+            >
+              <Ionicons
+                name={isFavorite ? 'heart' : 'heart-outline'}
+                size={22}
+                color={isFavorite ? colors.favorite : colors.text}
+              />
+            </Pressable>
+          ) : null}
         </View>
 
         <View style={styles.row}>

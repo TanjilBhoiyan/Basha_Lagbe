@@ -13,9 +13,11 @@ export type Amenity =
   | 'generator'
   | 'lift'
   | 'security'
+  | 'cctv'
   | 'gas'
   | 'water'
-  | 'balcony';
+  | 'balcony'
+  | 'fire-safety';
 
 export type PropertyOwner = {
   name: string;
@@ -44,6 +46,12 @@ export type Property = {
   advanceMonths: number;
   /** Monthly service charge in BDT (0 = included / none). */
   serviceCharge: number;
+    /** Refundable security deposit, in months of rent (0 = none). */
+  securityDepositMonths: number;
+  /** Whether electricity/gas/water bills are paid separately by the tenant. */
+  utilityCost: 'included' | 'separate';
+  /** Minimum rental period in months. */
+  minStayMonths: number;
   bedrooms: number;
   bathrooms: number;
   sizeSqft: number;

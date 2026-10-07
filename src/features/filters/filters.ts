@@ -83,6 +83,7 @@ export const FURNISHING_OPTIONS: { value: Furnishing; label: string; icon: IconN
   { value: 'unfurnished', label: 'Unfurnished', icon: 'cube-outline' },
 ];
 
+
 // TODO: load amenities from the backend (admin can add new ones).
 export const AMENITY_OPTIONS: { value: Amenity; label: string; icon: IconName }[] = [
   { value: 'wifi', label: 'WiFi', icon: 'wifi' },
@@ -90,12 +91,13 @@ export const AMENITY_OPTIONS: { value: Amenity; label: string; icon: IconName }[
   { value: 'ac', label: 'AC', icon: 'snowflake' },
   { value: 'generator', label: 'Generator', icon: 'lightning-bolt' },
   { value: 'lift', label: 'Lift', icon: 'elevator-passenger' },
-  { value: 'security', label: 'Security', icon: 'shield-check' },
+  { value: 'security', label: 'Security Guard', icon: 'shield-account' },
+  { value: 'cctv', label: 'CCTV', icon: 'cctv' },
   { value: 'gas', label: 'Gas Connection', icon: 'fire' },
   { value: 'water', label: 'Water Supply', icon: 'water' },
   { value: 'balcony', label: 'Balcony', icon: 'balcony' },
+  { value: 'fire-safety', label: 'Fire Safety', icon: 'fire-extinguisher' },
 ];
-
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
 function toIso(d: Date) {
