@@ -34,6 +34,7 @@ export default function ProfileScreen() {
       message={user ? `+880${user.phone} · ${user.email}` : 'Profile details coming soon.'}
     >
       <View style={styles.actions}>
+        <Button title="Owner Dashboard" variant="secondary" onPress={() => router.push('/dashboard')} />
         <Button title="Saved Properties" variant="secondary" onPress={() => router.push('/saved')} />
         <Button title="My Visit Requests" variant="secondary" onPress={() => router.push('/visits')} />
         <Button title="Logout" variant="outline" onPress={logout} />
