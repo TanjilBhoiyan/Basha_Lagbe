@@ -25,6 +25,8 @@ export type PropertyOwner = {
   isVerified: boolean;
   /** "YYYY-MM" the owner joined. */
   memberSince: string;
+  /** e.g. "within a few hours" — calculated by the backend later. */
+  responseTime?: string;
 };
 
 export type Property = {

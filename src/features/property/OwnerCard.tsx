@@ -5,16 +5,7 @@ import { AppText } from '@/components/ui';
 import { colors, radius, spacing } from '@/theme';
 import type { PropertyOwner } from '@/types/property';
 import { formatYearMonth } from '@/utils/format';
-
-function initials(name: string) {
-  return name
-    .replace(/^(Md\.|Mr\.|Mrs\.)\s*/i, '')
-    .split(' ')
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((w) => w[0]?.toUpperCase())
-    .join('');
-}
+import { OwnerAvatar } from './OwnerAvatar';
 
 export function OwnerCard({ owner, onPress }: { owner: PropertyOwner; onPress: () => void }) {
   return (
@@ -24,16 +15,7 @@ export function OwnerCard({ owner, onPress }: { owner: PropertyOwner; onPress: (
       accessibilityRole="button"
       accessibilityLabel={`Owner ${owner.name}${owner.isVerified ? ', verified' : ''}`}
     >
-      <View>
-        <View style={styles.avatar}>
-          <AppText style={styles.initials}>{initials(owner.name)}</AppText>
-        </View>
-        {owner.isVerified ? (
-          <View style={styles.avatarBadge}>
-            <Ionicons name="checkmark" size={12} color={colors.white} />
-          </View>
-        ) : null}
-      </View>
+      <OwnerAvatar name={owner.name} verified={owner.isVerified} />
 
       <View style={styles.info}>
         {owner.isVerified ? (
@@ -71,28 +53,6 @@ const styles = StyleSheet.create({
     backgroundColor: colors.white,
   },
   pressed: { opacity: 0.85 },
-  avatar: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: colors.primaryLight,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  initials: { fontSize: 20, fontWeight: '800', color: colors.primaryDeep },
-  avatarBadge: {
-    position: 'absolute',
-    right: -2,
-    bottom: -2,
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    backgroundColor: colors.primary,
-    borderWidth: 2,
-    borderColor: colors.white,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
   info: { flex: 1, gap: 1 },
   verifiedRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   bold: { fontWeight: '700' },

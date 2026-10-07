@@ -39,7 +39,7 @@ export const MOCK_PROPERTIES: Property[] = [
     availableFrom: '2026-11-01',
     images: [img.living, img.bedroom, img.kitchen, img.building],
     isVerified: true,
-    owner: { name: 'Md. Rahman', phone: '1711000001', isVerified: true, memberSince: '2023-01' },
+        owner: { name: 'Md. Rahman', phone: '1711000001', isVerified: true, memberSince: '2023-01', responseTime: 'within a few hours' },
   },
   {
     id: 'p2',
@@ -69,7 +69,7 @@ export const MOCK_PROPERTIES: Property[] = [
     availableFrom: '2026-10-15',
     images: [img.bedroom, img.living, img.kitchen, img.building],
     isVerified: true,
-    owner: { name: 'Nasrin Akter', phone: '1711000002', isVerified: true, memberSince: '2022-06' },
+    owner: { name: 'Nasrin Akter', phone: '1711000002', isVerified: true, memberSince: '2022-06', responseTime: 'within an hour' },
   },
   {
     id: 'p3',
@@ -189,7 +189,7 @@ export const MOCK_PROPERTIES: Property[] = [
     availableFrom: '2026-10-20',
     images: [img.office, img.building],
     isVerified: true,
-    owner: { name: 'Tanvir Islam', phone: '1711000006', isVerified: true, memberSince: '2022-02' },
+    owner: { name: 'Tanvir Islam', phone: '1711000006', isVerified: true, memberSince: '2022-02', responseTime: 'within a day' },
   },
   {
     id: 'p7',

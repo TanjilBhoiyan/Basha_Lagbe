@@ -246,7 +246,7 @@ export default function PropertyDetailsScreen() {
           label="Request Visit"
           primary
           flex={1.55}
-          onPress={() => comingSoon('Visit booking')}
+          onPress={() => router.push({ pathname: '/contact/[id]', params: { id: property.id } })}
         />
       </View>
     </View>
