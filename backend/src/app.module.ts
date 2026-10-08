@@ -9,6 +9,7 @@ import { HealthModule } from './health/health.module.js';
 import { LocationsModule } from './locations/locations.module.js';
 import { PrismaModule } from './prisma/prisma.module.js';
 import { PropertiesModule } from './properties/properties.module.js';
+import { VisitsModule } from './visits/visits.module.js';
 
 @Module({
   imports: [
@@ -20,6 +21,7 @@ import { PropertiesModule } from './properties/properties.module.js';
     LocationsModule,
     PropertiesModule,
     FavoritesModule,
+    VisitsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

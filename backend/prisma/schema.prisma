@@ -34,6 +34,7 @@ model User {
   updatedAt        DateTime   @updatedAt @map("updated_at")
   properties       Property[]
   favorites        Favorite[]
+  visits           Visit[]
 
   @@map("users")
 }
@@ -161,6 +162,7 @@ model Property {
   isVerified            Boolean         @default(false) @map("is_verified")
   images                PropertyImage[]
   favorites             Favorite[]
+  visits                Visit[]
   createdAt             DateTime        @default(now()) @map("created_at")
   updatedAt             DateTime        @updatedAt @map("updated_at")
 
@@ -191,4 +193,35 @@ model Favorite {
 
   @@id([userId, propertyId])
   @@map("favorites")
+}
+
+
+// ─── Visits ─────────────────────────────────────────────
+
+enum VisitStatus {
+  pending // waiting for the owner
+  confirmed
+  declined
+  cancelled // by the tenant
+}
+
+/// A tenant asking to see a property at a date/time slot.
+model Visit {
+  id         String      @id @default(uuid(7)) @db.Uuid
+  propertyId String      @map("property_id") @db.Uuid
+  property   Property    @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  tenantId   String      @map("tenant_id") @db.Uuid
+  tenant     User        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  /// Bangladesh local date of the visit
+  date       DateTime    @db.Date
+  /// Bangladesh local start time, "HH:mm" (e.g. "14:00")
+  time       String
+  message    String
+  status     VisitStatus @default(pending)
+  createdAt  DateTime    @default(now()) @map("created_at")
+  updatedAt  DateTime    @updatedAt @map("updated_at")
+
+  @@index([tenantId, createdAt])
+  @@index([propertyId, status])
+  @@map("visits")
 }
