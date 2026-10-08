@@ -1,0 +1,23 @@
+# Local development database for Basha Lagbe.
+# Start:  docker compose up -d
+# Stop:   docker compose stop
+name: basha-lagbe
+
+services:
+  db:
+    image: postgis/postgis:17-3.5
+    container_name: basha-lagbe-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: basha
+      POSTGRES_PASSWORD: basha_dev_password # local development only
+      POSTGRES_DB: basha_lagbe
+    ports:
+      # 5433 on your PC -> 5432 inside the container
+      # (5432 may already be used by another project)
+      - "5433:5432"
+    volumes:
+      - basha_lagbe_pgdata:/var/lib/postgresql/data
+
+volumes:
+  basha_lagbe_pgdata:
