@@ -23,3 +23,5 @@ Thumbs.db
 .vscode/*
 !.vscode/extensions.json
 .idea/
+# Prisma generated client (rebuilt by `npm install` / `npm run prisma:generate`)
+/src/generated/prisma

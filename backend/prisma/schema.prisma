@@ -1,0 +1,11 @@
+// Basha Lagbe database schema.
+// Tables (models) are added here step by step: User, Property, Visit, Chat...
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
