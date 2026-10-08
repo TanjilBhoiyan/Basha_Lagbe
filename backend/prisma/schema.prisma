@@ -9,3 +9,49 @@ generator client {
 datasource db {
   provider = "postgresql"
 }
+
+// ─── Auth ────────────────────────────────────────────────
+
+enum UserRole {
+  USER // tenant and/or owner — the same account can do both
+  ADMIN
+}
+
+model User {
+  id            String   @id @default(uuid(7)) @db.Uuid
+  fullName      String   @map("full_name")
+  /// 10-digit Bangladeshi number without +880, e.g. "1712345678"
+  phone         String   @unique
+  /// Always stored in lowercase
+  email         String   @unique
+  /// bcrypt hash — never the plain password
+  passwordHash  String   @map("password_hash")
+  phoneVerified Boolean  @default(false) @map("phone_verified")
+  role          UserRole @default(USER)
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  @@map("users")
+}
+
+enum OtpPurpose {
+  REGISTER
+  RESET_PASSWORD
+}
+
+/// One-time codes sent by SMS. Only a hash of the code is stored.
+model OtpCode {
+  id         String     @id @default(uuid(7)) @db.Uuid
+  phone      String
+  purpose    OtpPurpose
+  codeHash   String     @map("code_hash")
+  /// Wrong guesses so far (max 5)
+  attempts   Int        @default(0)
+  expiresAt  DateTime   @map("expires_at")
+  /// Set once the code has been used successfully
+  consumedAt DateTime?  @map("consumed_at")
+  createdAt  DateTime   @default(now()) @map("created_at")
+
+  @@index([phone, purpose])
+  @@map("otp_codes")
+}
