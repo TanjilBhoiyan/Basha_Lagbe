@@ -87,7 +87,7 @@ export default function VerifyOtpScreen() {
 
   const handleResend = async () => {
     setResending(true);
-    const result = await authService.resendOtp(phone);
+    const result = await authService.resendOtp(phone, purpose);
     setResending(false);
     if (result.ok) {
       setSecondsLeft(OTP_RESEND_SECONDS);

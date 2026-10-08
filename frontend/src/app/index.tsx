@@ -27,12 +27,18 @@ export default function SplashScreen() {
     ]).start();
 
     // Read stored state while the splash is showing, then route.
-    const stateReady = Promise.all([session.getUser(), onboardingStorage.isComplete()]);
+        const stateReady = Promise.all([
+      session.getUser(),
+      session.getToken(),
+      onboardingStorage.isComplete(),
+    ]);
     let cancelled = false;
     const timer = setTimeout(async () => {
-      const [user, onboardingDone] = await stateReady;
+      const [user, token, onboardingDone] = await stateReady;
       if (cancelled) return;
-      if (user) {
+      // Logged in only if we have both the user and a server token
+      // (an old mock login saved a user without a token).
+      if (user && token) {
         await goToAppHome();
       } else {
         router.replace(onboardingDone ? '/login' : '/onboarding');

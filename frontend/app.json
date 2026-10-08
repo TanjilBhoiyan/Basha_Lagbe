@@ -32,7 +32,8 @@
         {
           "locationWhenInUsePermission": "Basha Lagbe uses your location to show rental properties near you."
         }
-      ]
+      ],
+      "expo-secure-store"
     ],
     "experiments": {
       "typedRoutes": true

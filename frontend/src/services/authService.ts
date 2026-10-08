@@ -1,56 +1,44 @@
 /**
- * MOCK auth service — no backend yet.
- * Screens only talk to these functions, so swapping in real API calls later
- * will not require any screen changes.
+ * Auth — talks to the NestJS backend (/auth/*).
+ * Screens use the same functions as the old mock, so no screen had to change.
  *
- * Test account:  phone 1712345678 / email test@bashalagbe.com / password Test@1234
- * OTP code:      123456
+ * While the backend runs with OTP_MOCK=true, every OTP is 123456.
  */
 import type { LoginMethod, OtpPurpose, Result, User } from '@/types/auth';
 import { normalizeBdPhone } from '@/utils/validation';
 
+import { apiRequest } from './apiClient';
+import { session } from './session';
+
+/** Shown under the OTP boxes in development builds only. */
 export const MOCK_OTP_CODE = '123456';
 export const OTP_LENGTH = 6;
 export const OTP_RESEND_SECONDS = 60;
-export const OTP_MAX_ATTEMPTS = 5;
 
-type StoredUser = User & { password: string };
+type AuthResponse = { accessToken: string; user: User };
 
-const users: StoredUser[] = [
-  {
-    id: 'u_test',
-    fullName: 'Test User',
-    phone: '1712345678',
-    email: 'test@bashalagbe.com',
-    phoneVerified: true,
-    password: 'Test@1234',
-  },
-];
+/**
+ * Password reset happens over 3 screens. The short-lived reset token from
+ * "verify OTP" is kept here in memory until "reset password" uses it.
+ */
+let resetToken: string | null = null;
 
-/** Registrations waiting for OTP, keyed by phone. */
-const pendingRegistrations = new Map<string, StoredUser>();
-const otpAttempts = new Map<string, number>();
-
-const delay = (ms = 800) => new Promise((resolve) => setTimeout(resolve, ms));
-
-function toPublicUser({ password: _password, ...user }: StoredUser): User {
-  return user;
-}
-
-function findUser(method: LoginMethod, identifier: string) {
-  return method === 'phone'
-    ? users.find((u) => u.phone === normalizeBdPhone(identifier))
-    : users.find((u) => u.email.toLowerCase() === identifier.trim().toLowerCase());
+async function startSession(data: AuthResponse): Promise<User> {
+  await session.saveToken(data.accessToken);
+  return data.user;
 }
 
 export const authService = {
   async login(method: LoginMethod, identifier: string, password: string): Promise<Result<User>> {
-    await delay();
-    const user = findUser(method, identifier);
-    if (!user || user.password !== password) {
-      return { ok: false, error: 'Incorrect phone/email or password.' };
-    }
-    return { ok: true, data: toPublicUser(user) };
+    const result = await apiRequest<AuthResponse>('/auth/login', {
+      method: 'POST',
+      body: {
+        identifier: method === 'phone' ? normalizeBdPhone(identifier) : identifier.trim(),
+        password,
+      },
+    });
+    if (!result.ok) return result;
+    return { ok: true, data: await startSession(result.data) };
   },
 
   async register(input: {
@@ -59,25 +47,10 @@ export const authService = {
     email: string;
     password: string;
   }): Promise<Result<{ phone: string }>> {
-    await delay();
-    const phone = normalizeBdPhone(input.phone);
-    const email = input.email.trim().toLowerCase();
-    if (users.some((u) => u.phone === phone)) {
-      return { ok: false, error: 'An account with this phone number already exists.' };
-    }
-    if (users.some((u) => u.email === email)) {
-      return { ok: false, error: 'An account with this email already exists.' };
-    }
-    pendingRegistrations.set(phone, {
-      id: `u_${Date.now()}`,
-      fullName: input.fullName.trim(),
-      phone,
-      email,
-      phoneVerified: false,
-      password: input.password,
+    return apiRequest<{ phone: string }>('/auth/register', {
+      method: 'POST',
+      body: { ...input, phone: normalizeBdPhone(input.phone) },
     });
-    otpAttempts.set(phone, 0);
-    return { ok: true, data: { phone } };
   },
 
   /** Starts password reset. Returns the phone the OTP was sent to. */
@@ -85,55 +58,50 @@ export const authService = {
     method: LoginMethod,
     identifier: string,
   ): Promise<Result<{ phone: string }>> {
-    await delay();
-    const user = findUser(method, identifier);
-    if (!user) {
-      return { ok: false, error: 'No account found with these details.' };
-    }
-    otpAttempts.set(user.phone, 0);
-    return { ok: true, data: { phone: user.phone } };
+    return apiRequest<{ phone: string }>('/auth/forgot-password', {
+      method: 'POST',
+      body: { identifier: method === 'phone' ? normalizeBdPhone(identifier) : identifier.trim() },
+    });
   },
 
-  async resendOtp(phone: string): Promise<Result<null>> {
-    await delay(500);
-    // A fresh code gives the user a fresh set of attempts.
-    otpAttempts.set(phone, 0);
-    return { ok: true, data: null };
+  async resendOtp(phone: string, purpose: OtpPurpose = 'register'): Promise<Result<null>> {
+    const result = await apiRequest<{ phone: string }>('/auth/resend-otp', {
+      method: 'POST',
+      body: { phone, purpose },
+    });
+    return result.ok ? { ok: true, data: null } : result;
   },
 
+  /** register: logs the user in and returns them. reset-password: returns null. */
   async verifyOtp(phone: string, code: string, purpose: OtpPurpose): Promise<Result<User | null>> {
-    await delay();
-    const attempts = (otpAttempts.get(phone) ?? 0) + 1;
-    otpAttempts.set(phone, attempts);
+    const result = await apiRequest<AuthResponse | { resetToken: string }>('/auth/verify-otp', {
+      method: 'POST',
+      body: { phone, code, purpose },
+    });
+    if (!result.ok) return result;
 
-    if (attempts > OTP_MAX_ATTEMPTS) {
-      return { ok: false, error: 'Too many attempts. Please request a new code.' };
+    if ('resetToken' in result.data) {
+      resetToken = result.data.resetToken;
+      return { ok: true, data: null };
     }
-    if (code !== MOCK_OTP_CODE) {
-      const left = OTP_MAX_ATTEMPTS - attempts;
-      return {
-        ok: false,
-        error: left > 0 ? `Incorrect code. ${left} attempt(s) left.` : 'Too many attempts. Please request a new code.',
-      };
-    }
+    return { ok: true, data: await startSession(result.data) };
+  },
 
-    otpAttempts.delete(phone);
-    if (purpose === 'register') {
-      const pending = pendingRegistrations.get(phone);
-      if (!pending) return { ok: false, error: 'Registration expired. Please register again.' };
-      pendingRegistrations.delete(phone);
-      const user = { ...pending, phoneVerified: true };
-      users.push(user);
-      return { ok: true, data: toPublicUser(user) };
+  async resetPassword(_phone: string, newPassword: string): Promise<Result<null>> {
+    if (!resetToken) {
+      return { ok: false, error: 'This reset session has expired. Please start again.' };
     }
+    const result = await apiRequest<{ success: true }>('/auth/reset-password', {
+      method: 'POST',
+      body: { resetToken, newPassword },
+    });
+    if (!result.ok) return result;
+    resetToken = null;
     return { ok: true, data: null };
   },
 
-  async resetPassword(phone: string, newPassword: string): Promise<Result<null>> {
-    await delay();
-    const user = users.find((u) => u.phone === phone);
-    if (!user) return { ok: false, error: 'Account not found.' };
-    user.password = newPassword;
-    return { ok: true, data: null };
+  /** The logged-in user from the server (also checks the token is still valid). */
+  async me(): Promise<Result<User>> {
+    return apiRequest<User>('/auth/me', { auth: true });
   },
 };

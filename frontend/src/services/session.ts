@@ -1,10 +1,27 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as SecureStore from 'expo-secure-store';
+import { Platform } from 'react-native';
 
 import type { User } from '@/types/auth';
 
 const SESSION_KEY = 'basha-lagbe:session';
+const TOKEN_KEY = 'basha-lagbe.token';
 
-// TODO: move the token to expo-secure-store once the real backend issues one.
+/**
+ * The login token is a password-equivalent, so on phones it goes in the
+ * encrypted keychain/keystore (SecureStore). Web has no SecureStore.
+ */
+const tokenStore = {
+  get: () =>
+    Platform.OS === 'web' ? AsyncStorage.getItem(TOKEN_KEY) : SecureStore.getItemAsync(TOKEN_KEY),
+  set: (value: string) =>
+    Platform.OS === 'web'
+      ? AsyncStorage.setItem(TOKEN_KEY, value)
+      : SecureStore.setItemAsync(TOKEN_KEY, value),
+  remove: () =>
+    Platform.OS === 'web' ? AsyncStorage.removeItem(TOKEN_KEY) : SecureStore.deleteItemAsync(TOKEN_KEY),
+};
+
 export const session = {
   async getUser(): Promise<User | null> {
     try {
@@ -23,9 +40,26 @@ export const session = {
     }
   },
 
+  async getToken(): Promise<string | null> {
+    try {
+      return await tokenStore.get();
+    } catch {
+      return null;
+    }
+  },
+
+  async saveToken(token: string): Promise<void> {
+    try {
+      await tokenStore.set(token);
+    } catch {
+      // ignore
+    }
+  },
+
+  /** Logout: forget both the user and the token. */
   async clear(): Promise<void> {
     try {
-      await AsyncStorage.removeItem(SESSION_KEY);
+      await Promise.all([AsyncStorage.removeItem(SESSION_KEY), tokenStore.remove()]);
     } catch {
       // ignore
     }
