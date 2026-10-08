@@ -9,7 +9,13 @@ import { session } from './session';
 export const API_URL = (process.env.EXPO_PUBLIC_API_URL ?? 'http://10.0.2.2:3000').replace(/\/$/, '');
 
 const TIMEOUT_MS = 15000;
-
+/**
+ * Photos come from the API as "/static/..." (served by our backend) or a full
+ * https URL (cloud storage later). Turns either into an <Image source>.
+ */
+export function apiImage(url: string): { uri: string } {
+  return { uri: /^https?:\/\//.test(url) ? url : `${API_URL}${url}` };
+}
 type RequestOptions = {
   method?: 'GET' | 'POST' | 'PATCH' | 'PUT' | 'DELETE';
   body?: unknown;

@@ -1,13 +1,14 @@
 import type { ChatMessage } from '@/types/chat';
 import type { Property } from '@/types/property';
 import { formatBdNumber } from '@/utils/format';
+import { SAMPLE_PROPERTY_IDS as ID } from './sampleIds';
 
 /** Owners shown as "Online" in the mock. The backend will send real presence. */
-export const MOCK_ONLINE_PROPERTY_IDS = ['p1', 'p2'];
+export const MOCK_ONLINE_PROPERTY_IDS: string[] = [ID.p1, ID.p2];
 
 /** A sample conversation for p1 (like the design), dated a few minutes ago. */
 export function seedMessages(conversationId: string, propertyId: string): ChatMessage[] {
-  if (propertyId !== 'p1') return [];
+  if (propertyId !== ID.p1) return [];
   const lines: [ChatMessage['sender'], string, number][] = [
     ['me', 'Assalamu Alaikum ভাই,\nIs this apartment still available?', 30],
     ['owner', 'Wa Alaikum Assalam!\nYes, it’s still available.', 28],

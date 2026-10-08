@@ -1,4 +1,5 @@
 import type { Property } from '@/types/property';
+import { SAMPLE_PROPERTY_IDS as ID } from './sampleIds';
 
 const img = {
   living: require('../../assets/images/properties/living-room.jpg'),
@@ -12,7 +13,7 @@ const img = {
 // MOCK data — will come from the backend later.
 export const MOCK_PROPERTIES: Property[] = [
   {
-    id: 'p1',
+    id: ID.p1,
     title: 'Modern Apartment in Mirpur',
     type: 'apartment',
     locationId: 'dhaka-mirpur',
@@ -42,7 +43,7 @@ export const MOCK_PROPERTIES: Property[] = [
         owner: { name: 'Md. Rahman', phone: '1711000001', isVerified: true, memberSince: '2023-01', responseTime: 'within a few hours' },
   },
   {
-    id: 'p2',
+    id: ID.p2,
     title: 'Cozy Flat in Dhanmondi',
     type: 'apartment',
     locationId: 'dhaka-dhanmondi',
@@ -72,7 +73,7 @@ export const MOCK_PROPERTIES: Property[] = [
     owner: { name: 'Nasrin Akter', phone: '1711000002', isVerified: true, memberSince: '2022-06', responseTime: 'within an hour' },
   },
   {
-    id: 'p3',
+    id: ID.p3,
     title: 'Family House with Parking',
     type: 'house',
     locationId: 'dhaka-uttara',
@@ -102,7 +103,7 @@ export const MOCK_PROPERTIES: Property[] = [
     owner: { name: 'Kamal Hossain', phone: '1711000003', isVerified: false, memberSince: '2021-11' },
   },
   {
-    id: 'p4',
+    id: ID.p4,
     title: 'Single Room for Students',
     type: 'room',
     locationId: 'dhaka-mirpur',
@@ -132,7 +133,7 @@ export const MOCK_PROPERTIES: Property[] = [
     owner: { name: 'Rahima Begum', phone: '1711000004', isVerified: true, memberSince: '2024-03' },
   },
   {
-    id: 'p5',
+    id: ID.p5,
     title: 'Sublet Room near Bashundhara',
     type: 'sublet',
     locationId: 'dhaka-bashundhara',
@@ -162,7 +163,7 @@ export const MOCK_PROPERTIES: Property[] = [
     owner: { name: 'Sajid Ahmed', phone: '1711000005', isVerified: false, memberSince: '2024-08' },
   },
   {
-    id: 'p6',
+    id: ID.p6,
     title: 'Office Space in Gulshan',
     type: 'office',
     locationId: 'dhaka-gulshan',
@@ -192,7 +193,7 @@ export const MOCK_PROPERTIES: Property[] = [
     owner: { name: 'Tanvir Islam', phone: '1711000006', isVerified: true, memberSince: '2022-02', responseTime: 'within a day' },
   },
   {
-    id: 'p7',
+    id: ID.p7,
     title: 'Apartment with Hill View',
     type: 'apartment',
     locationId: 'chattogram',

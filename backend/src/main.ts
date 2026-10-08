@@ -1,9 +1,17 @@
+import { join } from 'node:path';
+
 import { ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
+import type { NestExpressApplication } from '@nestjs/platform-express';
+
 import { AppModule } from './app.module.js';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create<NestExpressApplication>(AppModule);
+
+  // Sample photos (backend/public) -> http://localhost:3000/static/...
+  // Real uploads will move to cloud storage later.
+  app.useStaticAssets(join(process.cwd(), 'public'), { prefix: '/static/' });
 
   // Check every request body against its DTO (e.g. RegisterDto) before it reaches a controller.
   app.useGlobalPipes(

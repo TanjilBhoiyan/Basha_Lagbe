@@ -6,8 +6,8 @@ import { seedVisits } from '@/mocks/visits';
 import type { Result } from '@/types/auth';
 import type { VisitRequest } from '@/types/visit';
 
-const VISITS_KEY = 'basha-lagbe:visit-requests';
-const SEEDED_KEY = 'basha-lagbe:visit-requests-seeded';
+const VISITS_KEY = 'basha-lagbe:visit-requests-v2';
+const SEEDED_KEY = 'basha-lagbe:visit-requests-v2-seeded';
 const delay = (ms = 800) => new Promise((resolve) => setTimeout(resolve, ms));
 
 async function writeAll(list: VisitRequest[]) {

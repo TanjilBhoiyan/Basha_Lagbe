@@ -1,92 +1,97 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
-
-import { DEFAULT_FILTERS, matchesFilters, type PropertyFilters } from '@/features/filters/filters';
-import { MOCK_PROPERTIES } from '@/mocks/properties';
+import { DEFAULT_FILTERS, type PropertyFilters } from '@/features/filters/filters';
 import type { Property } from '@/types/property';
+
+import { apiImage, apiRequest } from './apiClient';
 
 export type PropertySort = 'recommended' | 'price-asc' | 'price-desc';
 
-const FAVORITES_KEY = 'basha-lagbe:favorites';
-const delay = (ms = 700) => new Promise((resolve) => setTimeout(resolve, ms));
+/** What GET /properties returns. Photos are URLs, turned into <Image> sources here. */
+type ApiProperty = Omit<Property, 'images'> & { images: string[] };
+type ApiPage = { items: ApiProperty[]; total: number; page: number; limit: number };
 
-// MOCK service — will call the backend API later.
+const toProperty = (p: ApiProperty): Property => ({ ...p, images: p.images.map(apiImage) });
+
+/** Filters -> query string, skipping everything that means "any". */
+function toQuery(params: {
+  filters?: PropertyFilters;
+  query?: string;
+  sort?: PropertySort;
+  locationId?: string;
+  limit?: number;
+}): string {
+  const f = params.filters ?? DEFAULT_FILTERS;
+  const q = new URLSearchParams();
+  if (params.query?.trim()) q.set('q', params.query.trim());
+  if (f.minRent > 0) q.set('minRent', String(f.minRent));
+  if (f.maxRent !== null) q.set('maxRent', String(f.maxRent));
+  if (f.type) q.set('type', f.type);
+  if (f.tenantType) q.set('tenantType', f.tenantType);
+  if (f.bedrooms !== null) q.set('bedrooms', String(f.bedrooms));
+  if (f.bathrooms !== null) q.set('bathrooms', String(f.bathrooms));
+  if (f.furnishing) q.set('furnishing', f.furnishing);
+  if (f.amenities.length) q.set('amenities', f.amenities.join(','));
+  if (f.availableBy) q.set('availableBy', f.availableBy);
+  if (params.locationId) q.set('locationId', params.locationId);
+  if (params.sort) q.set('sort', params.sort);
+  if (params.limit) q.set('limit', String(params.limit));
+  const text = q.toString();
+  return text ? `?${text}` : '';
+}
+
+/**
+ * Favorites are kept on the server for the logged-in user.
+ * A small in-memory copy keeps hearts in sync between screens without refetching.
+ */
+let favoriteCache: string[] | null = null;
+
 export const propertyService = {
   /** Matching properties, with the selected location's listings first. */
-  async getRecommended(params: {
-    locationId?: string;
-    filters?: PropertyFilters;
-  }): Promise<Property[]> {
-    await delay();
-    const filters = params.filters ?? DEFAULT_FILTERS;
-    return MOCK_PROPERTIES.filter((p) => matchesFilters(p, filters)).sort(
-      (a, b) =>
-        Number(b.locationId === params.locationId) - Number(a.locationId === params.locationId),
-    );
+  async getRecommended(params: { locationId?: string; filters?: PropertyFilters }): Promise<Property[]> {
+    const result = await apiRequest<ApiPage>(`/properties${toQuery({ ...params, sort: 'recommended' })}`);
+    return result.ok ? result.data.items.map(toProperty) : [];
   },
 
-  /**
-   * Search screen: filters + free-text query + sort.
-   * The query matches the title or the public area label.
-   */
+  /** Search screen: filters + free-text query + sort. */
   async search(params: {
     filters: PropertyFilters;
     query?: string;
     sort?: PropertySort;
     locationId?: string;
   }): Promise<Property[]> {
-    await delay(500);
-    const q = params.query?.trim().toLowerCase() ?? '';
-    const list = MOCK_PROPERTIES.filter(
-      (p) =>
-        matchesFilters(p, params.filters) &&
-        (!q || p.title.toLowerCase().includes(q) || p.areaLabel.toLowerCase().includes(q)),
-    );
-    switch (params.sort ?? 'recommended') {
-      case 'price-asc':
-        return list.sort((a, b) => a.monthlyRent - b.monthlyRent);
-      case 'price-desc':
-        return list.sort((a, b) => b.monthlyRent - a.monthlyRent);
-      default:
-        return list.sort(
-          (a, b) =>
-            Number(b.locationId === params.locationId) -
-            Number(a.locationId === params.locationId),
-        );
-    }
+    const result = await apiRequest<ApiPage>(`/properties${toQuery({ ...params, limit: 50 })}`);
+    return result.ok ? result.data.items.map(toProperty) : [];
   },
-    /** One property, or null if it was removed / never existed. */
+
+  /** One property, or null if it was removed / never existed. */
   async getById(id: string): Promise<Property | null> {
-    await delay(400);
-    return MOCK_PROPERTIES.find((p) => p.id === id) ?? null;
+    const result = await apiRequest<ApiProperty>(`/properties/${encodeURIComponent(id)}`);
+    return result.ok ? toProperty(result.data) : null;
   },
 
   /** Result count for the "Apply Filters" button. */
   async count(filters: PropertyFilters): Promise<number> {
-    await delay(150);
-    return MOCK_PROPERTIES.filter((p) => matchesFilters(p, filters)).length;
+    const result = await apiRequest<ApiPage>(`/properties${toQuery({ filters, limit: 1 })}`);
+    return result.ok ? result.data.total : 0;
   },
 
+  /** Oldest first (the Saved screen reverses it to show newest first). */
   async getFavoriteIds(): Promise<string[]> {
-    try {
-      const raw = await AsyncStorage.getItem(FAVORITES_KEY);
-      return raw ? (JSON.parse(raw) as string[]) : [];
-    } catch {
-      return [];
-    }
+    const result = await apiRequest<string[]>('/favorites/ids', { auth: true });
+    if (!result.ok) return favoriteCache ?? [];
+    favoriteCache = [...result.data].reverse();
+    return favoriteCache;
   },
 
   /** Returns the updated list of favorite ids. */
   async toggleFavorite(id: string): Promise<string[]> {
-    const current = await this.getFavoriteIds();
-    const next = current.includes(id) ? current.filter((x) => x !== id) : [...current, id];
-    try {
-      await AsyncStorage.setItem(FAVORITES_KEY, JSON.stringify(next));
-    } catch {
-      // ignore
-    }
-    return next;
+    const current = favoriteCache ?? (await this.getFavoriteIds());
+    const saved = current.includes(id);
+    const result = await apiRequest<null>(`/favorites/${encodeURIComponent(id)}`, {
+      method: saved ? 'DELETE' : 'PUT',
+      auth: true,
+    });
+    if (!result.ok) return current;
+    favoriteCache = saved ? current.filter((x) => x !== id) : [...current, id];
+    return favoriteCache;
   },
 };
-export function plural(count: number, word: string): string {
-  return `${count} ${word}${count === 1 ? '' : 's'}`;
-}

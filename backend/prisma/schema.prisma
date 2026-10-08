@@ -18,18 +18,22 @@ enum UserRole {
 }
 
 model User {
-  id            String   @id @default(uuid(7)) @db.Uuid
-  fullName      String   @map("full_name")
+  id               String     @id @default(uuid(7)) @db.Uuid
+  fullName         String     @map("full_name")
   /// 10-digit Bangladeshi number without +880, e.g. "1712345678"
-  phone         String   @unique
+  phone            String     @unique
   /// Always stored in lowercase
-  email         String   @unique
+  email            String     @unique
   /// bcrypt hash — never the plain password
-  passwordHash  String   @map("password_hash")
-  phoneVerified Boolean  @default(false) @map("phone_verified")
-  role          UserRole @default(USER)
-  createdAt     DateTime @default(now()) @map("created_at")
-  updatedAt     DateTime @updatedAt @map("updated_at")
+  passwordHash     String     @map("password_hash")
+  phoneVerified    Boolean    @default(false) @map("phone_verified")
+  /// NID checked by our team (shows the "Verified Owner" badge)
+  identityVerified Boolean    @default(false) @map("identity_verified")
+  role             UserRole   @default(USER)
+  createdAt        DateTime   @default(now()) @map("created_at")
+  updatedAt        DateTime   @updatedAt @map("updated_at")
+  properties       Property[]
+  favorites        Favorite[]
 
   @@map("users")
 }
@@ -54,4 +58,137 @@ model OtpCode {
 
   @@index([phone, purpose])
   @@map("otp_codes")
+}
+
+// ─── Locations & properties ─────────────────────────────
+
+/// Areas/cities tenants can pick (admin-managed later).
+model Location {
+  /// Readable id, e.g. "dhaka-mirpur"
+  id          String     @id
+  /// Area name, e.g. "Mirpur" (equals the city for a whole city)
+  name        String
+  city        String
+  latitude    Float
+  longitude   Float
+  /// Path under /static or a full https URL
+  imageUrl    String?    @map("image_url")
+  /// Shown in "Popular" lists, ordered by popularRank (lower first)
+  popularRank Int?       @map("popular_rank")
+  properties  Property[]
+
+  @@map("locations")
+}
+
+enum PropertyType {
+  apartment
+  room
+  house
+  sublet
+  office
+  shop
+  mess
+}
+
+enum TenantType {
+  family
+  bachelor_male   @map("bachelor-male")
+  bachelor_female @map("bachelor-female")
+  student
+  professional
+}
+
+enum Furnishing {
+  furnished
+  semi_furnished @map("semi-furnished")
+  unfurnished
+}
+
+enum Amenity {
+  wifi
+  parking
+  ac
+  generator
+  lift
+  security
+  cctv
+  gas
+  water
+  balcony
+  fire_safety @map("fire-safety")
+}
+
+enum ListingStatus {
+  pending // waiting for admin review
+  published
+  rented
+  rejected
+}
+
+model Property {
+  id                    String          @id @default(uuid(7)) @db.Uuid
+  ownerId               String          @map("owner_id") @db.Uuid
+  owner                 User            @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  locationId            String          @map("location_id")
+  location              Location        @relation(fields: [locationId], references: [id])
+  title                 String
+  description           String
+  type                  PropertyType
+  status                ListingStatus   @default(pending)
+  /// Public area text, e.g. "Mirpur 10, Dhaka". The exact address is never shown publicly.
+  areaLabel             String          @map("area_label")
+  /// Approximate public map position
+  latitude              Float
+  longitude             Float
+  monthlyRent           Int             @map("monthly_rent")
+  negotiable            Boolean         @default(false)
+  advanceMonths         Int             @default(0) @map("advance_months")
+  serviceCharge         Int             @default(0) @map("service_charge")
+  securityDepositMonths Int             @default(0) @map("security_deposit_months")
+  utilityIncluded       Boolean         @default(false) @map("utility_included")
+  minStayMonths         Int             @default(0) @map("min_stay_months")
+  bedrooms              Int             @default(0)
+  bathrooms             Int             @default(0)
+  sizeSqft              Int             @map("size_sqft")
+  floorNumber           Int             @default(0) @map("floor_number")
+  totalFloors           Int             @default(1) @map("total_floors")
+  tenantTypes           TenantType[]    @map("tenant_types")
+  furnishing            Furnishing      @default(unfurnished)
+  amenities             Amenity[]
+  availableFrom         DateTime        @map("available_from") @db.Date
+  videoUrl              String?         @map("video_url")
+  /// Checked by our team
+  isVerified            Boolean         @default(false) @map("is_verified")
+  images                PropertyImage[]
+  favorites             Favorite[]
+  createdAt             DateTime        @default(now()) @map("created_at")
+  updatedAt             DateTime        @updatedAt @map("updated_at")
+
+  @@index([status, locationId])
+  @@index([status, monthlyRent])
+  @@map("properties")
+}
+
+model PropertyImage {
+  id         String   @id @default(uuid(7)) @db.Uuid
+  propertyId String   @map("property_id") @db.Uuid
+  property   Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  /// Path under /static or a full https URL
+  url        String
+  sortOrder  Int      @default(0) @map("sort_order")
+
+  @@index([propertyId, sortOrder])
+  @@map("property_images")
+}
+
+/// A tenant's saved (hearted) property.
+model Favorite {
+  userId     String   @map("user_id") @db.Uuid
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  propertyId String   @map("property_id") @db.Uuid
+  property   Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  @@id([userId, propertyId])
+  @@map("favorites")
 }

@@ -1,14 +1,20 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-import { MOCK_LOCATIONS, POPULAR_LOCATION_IDS } from '@/mocks/locations';
 import type { Location } from '@/types/location';
 
-const SELECTED_KEY = 'basha-lagbe:selected-location';
+import { apiImage, apiRequest } from './apiClient';
+
+/** v2: the whole location is stored (not just the id) so the app can start offline. */
+const SELECTED_KEY = 'basha-lagbe:selected-location-v2';
 const RECENT_KEY = 'basha-lagbe:recent-locations';
 const MAX_RECENT = 5;
 
-const delay = (ms = 400) => new Promise((resolve) => setTimeout(resolve, ms));
-const byId = (id: string) => MOCK_LOCATIONS.find((l) => l.id === id);
+type ApiLocation = Omit<Location, 'image'> & { imageUrl: string | null };
+
+const toLocation = ({ imageUrl, ...l }: ApiLocation): Location => ({
+  ...l,
+  image: imageUrl ? apiImage(imageUrl) : undefined,
+});
 
 async function readIds(key: string): Promise<string[]> {
   try {
@@ -19,32 +25,31 @@ async function readIds(key: string): Promise<string[]> {
   }
 }
 
-// MOCK service — location lists will come from the backend later.
+async function fetchLocations(query: string): Promise<Location[]> {
+  const result = await apiRequest<ApiLocation[]>(`/locations${query}`);
+  return result.ok ? result.data.map(toLocation) : [];
+}
+
 export const locationService = {
   async getPopular(): Promise<Location[]> {
-    await delay();
-    return POPULAR_LOCATION_IDS.map(byId).filter((l): l is Location => !!l);
+    return fetchLocations('');
   },
 
   async getRecent(): Promise<Location[]> {
     const ids = await readIds(RECENT_KEY);
-    return ids.map(byId).filter((l): l is Location => !!l);
+    return ids.length ? fetchLocations(`?ids=${ids.map(encodeURIComponent).join(',')}`) : [];
   },
 
   /** Case-insensitive match on area or city name. */
   async search(query: string): Promise<Location[]> {
-    await delay(200);
-    const q = query.trim().toLowerCase();
-    if (!q) return [];
-    return MOCK_LOCATIONS.filter(
-      (l) => l.name.toLowerCase().includes(q) || l.city.toLowerCase().includes(q),
-    );
+    const q = query.trim();
+    return q ? fetchLocations(`?q=${encodeURIComponent(q)}`) : [];
   },
 
   async getSelected(): Promise<Location | null> {
     try {
-      const id = await AsyncStorage.getItem(SELECTED_KEY);
-      return id ? (byId(id) ?? null) : null;
+      const raw = await AsyncStorage.getItem(SELECTED_KEY);
+      return raw ? (JSON.parse(raw) as Location) : null;
     } catch {
       return null;
     }
@@ -55,7 +60,7 @@ export const locationService = {
     try {
       const recent = (await readIds(RECENT_KEY)).filter((id) => id !== location.id);
       await AsyncStorage.multiSet([
-        [SELECTED_KEY, location.id],
+        [SELECTED_KEY, JSON.stringify(location)],
         [RECENT_KEY, JSON.stringify([location.id, ...recent].slice(0, MAX_RECENT))],
       ]);
     } catch {
