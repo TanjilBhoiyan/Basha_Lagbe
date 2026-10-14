@@ -1,55 +1,53 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
-
-import { MOCK_MY_LISTINGS } from '@/mocks/myListings';
+import type { Result } from '@/types/auth';
 import type { ListingStatus, OwnerListing } from '@/types/listing';
+import type { Property } from '@/types/property';
 
-const CHANGES_KEY = 'basha-lagbe:my-listing-changes';
-const delay = (ms = 500) => new Promise((resolve) => setTimeout(resolve, ms));
+import { apiImage, apiRequest } from './apiClient';
 
-/** Local changes on top of the mock data: new status, or "deleted". */
-type Changes = Record<string, ListingStatus | 'deleted'>;
+/** GET /properties/mine returns full properties plus their status and post date. */
+type ApiMyProperty = Omit<Property, 'images'> & {
+  images: string[];
+  status: ListingStatus | 'rejected';
+  createdAt: string;
+};
 
-async function readChanges(): Promise<Changes> {
-  try {
-    const raw = await AsyncStorage.getItem(CHANGES_KEY);
-    return raw ? (JSON.parse(raw) as Changes) : {};
-  } catch {
-    return {};
-  }
-}
+export type MyListings = {
+  listings: OwnerListing[];
+  /** The property for each listing, by id. */
+  properties: Record<string, Property>;
+};
 
-async function writeChange(propertyId: string, value: ListingStatus | 'deleted') {
-  const changes = await readChanges();
-  changes[propertyId] = value;
-  try {
-    await AsyncStorage.setItem(CHANGES_KEY, JSON.stringify(changes));
-  } catch {
-    // ignore
-  }
-}
-
-// MOCK service — will call the backend API later.
+/** The logged-in owner's own listings (backend: /properties/mine). */
 export const ownerListingService = {
-  /** The owner's listings, newest first. */
-  async getMyListings(): Promise<OwnerListing[]> {
-    await delay();
-    const changes = await readChanges();
-    return MOCK_MY_LISTINGS.filter((l) => changes[l.propertyId] !== 'deleted')
-      .map((l) => {
-        const change = changes[l.propertyId];
-        return change && change !== 'deleted' ? { ...l, status: change } : l;
-      })
-      .sort((a, b) => b.postedAt.localeCompare(a.postedAt));
+  /** Newest first. Rejected listings are hidden for now (no screen for them yet). */
+  async getMyListings(): Promise<MyListings> {
+    const result = await apiRequest<ApiMyProperty[]>('/properties/mine', { auth: true });
+    const empty: MyListings = { listings: [], properties: {} };
+    if (!result.ok) return empty;
+
+    return result.data.reduce<MyListings>((acc, { status, createdAt, images, ...p }) => {
+      if (status === 'rejected') return acc;
+      acc.listings.push({ propertyId: p.id, status, postedAt: createdAt });
+      acc.properties[p.id] = { ...p, images: images.map(apiImage) };
+      return acc;
+    }, empty);
   },
 
   /** Mark as rented, or available (published) again. */
-  async setStatus(propertyId: string, status: ListingStatus): Promise<void> {
-    await delay(300);
-    await writeChange(propertyId, status);
+  async setStatus(propertyId: string, status: ListingStatus): Promise<Result<null>> {
+    const result = await apiRequest<unknown>(`/properties/${encodeURIComponent(propertyId)}/status`, {
+      method: 'PATCH',
+      body: { status },
+      auth: true,
+    });
+    return result.ok ? { ok: true, data: null } : result;
   },
 
-  async remove(propertyId: string): Promise<void> {
-    await delay(300);
-    await writeChange(propertyId, 'deleted');
+  async remove(propertyId: string): Promise<Result<null>> {
+    const result = await apiRequest<null>(`/properties/${encodeURIComponent(propertyId)}`, {
+      method: 'DELETE',
+      auth: true,
+    });
+    return result.ok ? { ok: true, data: null } : result;
   },
 };

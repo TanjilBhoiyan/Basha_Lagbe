@@ -20,7 +20,7 @@ import { OwnerListingCard } from '@/features/owner/OwnerListingCard';
 import { StatTile } from '@/features/owner/StatTile';
 import { ownerListingService } from '@/services/ownerListingService';
 import { postDraftService } from '@/services/postDraftService';
-import { propertyService } from '@/services/propertyService';
+import { visitService } from '@/services/visitService';
 import { colors, radius, SCREEN_PADDING, spacing } from '@/theme';
 import type { ListingStatus, OwnerListing } from '@/types/listing';
 import type { Property } from '@/types/property';
@@ -38,20 +38,21 @@ export default function OwnerDashboardScreen() {
   const [listings, setListings] = useState<OwnerListing[]>([]);
   const [properties, setProperties] = useState<Record<string, Property>>({});
   const [draft, setDraft] = useState<PropertyDraft | null>(null);
+  const [pendingVisits, setPendingVisits] = useState(0);
   const [filter, setFilter] = useState<Filter>('all');
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
   const load = useCallback(async () => {
-    const [list, saved] = await Promise.all([ownerListingService.getMyListings(), postDraftService.load()]);
-    const found = await Promise.all(list.map((l) => propertyService.getById(l.propertyId)));
-    const map: Record<string, Property> = {};
-    found.forEach((p) => {
-      if (p) map[p.id] = p;
-    });
-    setListings(list.filter((l) => map[l.propertyId]));
-    setProperties(map);
+    const [mine, saved, visits] = await Promise.all([
+      ownerListingService.getMyListings(),
+      postDraftService.load(),
+      visitService.getIncomingGrouped(),
+    ]);
+    setListings(mine.listings);
+    setProperties(mine.properties);
     setDraft(hasDraftContent(saved.draft) ? saved.draft : null);
+    setPendingVisits(visits.pending.length);
   }, []);
 
   useFocusEffect(
@@ -74,7 +75,11 @@ export default function OwnerDashboardScreen() {
   const view = (id: string) => router.push({ pathname: '/property/[id]', params: { id } });
 
   const changeStatus = async (listing: OwnerListing, status: ListingStatus) => {
-    await ownerListingService.setStatus(listing.propertyId, status);
+    const result = await ownerListingService.setStatus(listing.propertyId, status);
+    if (!result.ok) {
+      Alert.alert('Could not update', result.error);
+      return;
+    }
     setListings((list) => list.map((l) => (l.propertyId === listing.propertyId ? { ...l, status } : l)));
   };
 
@@ -85,7 +90,11 @@ export default function OwnerDashboardScreen() {
         text: 'Delete',
         style: 'destructive',
         onPress: async () => {
-          await ownerListingService.remove(listing.propertyId);
+          const result = await ownerListingService.remove(listing.propertyId);
+          if (!result.ok) {
+            Alert.alert('Could not delete', result.error);
+            return;
+          }
           setListings((list) => list.filter((l) => l.propertyId !== listing.propertyId));
         },
       },
@@ -138,6 +147,29 @@ export default function OwnerDashboardScreen() {
         style={styles.addBtn}
         leftIcon={<Ionicons name="add" size={24} color={colors.white} />}
       />
+
+      <Pressable
+        onPress={() => router.push('/owner-visits')}
+        style={styles.visitsLink}
+        accessibilityRole="button"
+        accessibilityLabel={`Visit requests, ${pendingVisits} waiting`}
+      >
+        <Ionicons name="calendar" size={22} color={colors.primaryDeep} />
+        <View style={styles.flex}>
+          <AppText variant="bodyBold">Visit Requests</AppText>
+          <AppText variant="small" color="textSecondary" style={styles.normal}>
+            Tenants who want to see your properties
+          </AppText>
+        </View>
+        {pendingVisits > 0 ? (
+          <View style={styles.badge}>
+            <AppText variant="small" style={styles.badgeText}>
+              {pendingVisits} new
+            </AppText>
+          </View>
+        ) : null}
+        <Ionicons name="chevron-forward" size={18} color={colors.textSecondary} />
+      </Pressable>
 
       {draft ? (
         <Pressable onPress={addProperty} style={styles.draft} accessibilityRole="button">
@@ -242,6 +274,23 @@ const styles = StyleSheet.create({
   headerBlock: { gap: spacing.md },
   tiles: { flexDirection: 'row', gap: spacing.sm },
   addBtn: { minHeight: 54, borderRadius: radius.lg, backgroundColor: colors.primaryDeep, borderColor: colors.primaryDeep },
+  visitsLink: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    padding: spacing.md,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.white,
+  },
+  badge: {
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 3,
+    borderRadius: radius.full,
+    backgroundColor: colors.warning,
+  },
+  badgeText: { color: colors.white, fontWeight: '700' },
   draft: {
     flexDirection: 'row',
     alignItems: 'center',

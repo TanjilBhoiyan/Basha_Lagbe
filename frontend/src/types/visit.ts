@@ -13,3 +13,9 @@ export type VisitRequest = {
   /** ISO timestamp. */
   createdAt: string;
 };
+
+/** A request for one of the owner's properties (owner side). */
+export type IncomingVisit = VisitRequest & {
+  property: { title: string; areaLabel: string };
+  tenant: { name: string; phone: string };
+};

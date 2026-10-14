@@ -47,6 +47,7 @@ export function toApiProperty(p: PropertyWithRelations) {
       isVerified: p.owner.identityVerified,
       memberSince: joined.slice(0, 7),
     },
+    createdAt: p.createdAt.toISOString(),
   };
 }
 

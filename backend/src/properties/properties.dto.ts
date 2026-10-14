@@ -95,3 +95,8 @@ export class ListPropertiesQuery {
   @Max(50)
   limit?: number;
 }
+export class UpdateListingStatusDto {
+  /** rented = hide from search; published = available again */
+  @IsIn(['published', 'rented'])
+  status: 'published' | 'rented';
+}

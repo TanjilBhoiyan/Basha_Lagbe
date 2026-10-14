@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 
 import { fromApiEnum } from '../common/enums.js';
 import type { Amenity, Furnishing, Prisma, TenantType } from '../generated/prisma/client.js';
@@ -68,6 +68,40 @@ export class PropertiesService {
     });
     if (!property) throw new NotFoundException('This listing is no longer available.');
     return toApiProperty(property);
+  }
+
+  /** Owner: all my listings (any status), newest first. */
+  async mine(ownerId: string): Promise<ApiProperty[]> {
+    const properties = await this.prisma.property.findMany({
+      where: { ownerId },
+      include: PROPERTY_INCLUDE,
+      orderBy: { createdAt: 'desc' },
+    });
+    return properties.map(toApiProperty);
+  }
+
+  /** Owner: mark a live listing as rented, or a rented one as available again. */
+  async setStatus(ownerId: string, id: string, status: 'published' | 'rented'): Promise<ApiProperty> {
+    const property = await this.prisma.property.findFirst({ where: { id, ownerId } });
+    if (!property) throw new NotFoundException('Listing not found.');
+    const allowed =
+      (property.status === 'published' && status === 'rented') ||
+      (property.status === 'rented' && status === 'published');
+    if (!allowed) {
+      throw new BadRequestException(`A ${property.status} listing can't be changed to ${status}.`);
+    }
+    const updated = await this.prisma.property.update({
+      where: { id },
+      data: { status },
+      include: PROPERTY_INCLUDE,
+    });
+    return toApiProperty(updated);
+  }
+
+  /** Owner: delete my listing (photos, favorites and visit requests go with it). */
+  async remove(ownerId: string, id: string): Promise<void> {
+    const { count } = await this.prisma.property.deleteMany({ where: { id, ownerId } });
+    if (!count) throw new NotFoundException('Listing not found.');
   }
 
   private buildWhere(q: ListPropertiesQuery): Prisma.PropertyWhereInput {

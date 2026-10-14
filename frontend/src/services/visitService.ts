@@ -1,7 +1,7 @@
 import { displayStatus, isActiveVisit, tabOf, type VisitTab } from '@/features/visit/visitStatus';
 import { slotStart } from '@/features/visit/visitSlots';
 import type { Result } from '@/types/auth';
-import type { VisitRequest } from '@/types/visit';
+import type { IncomingVisit, VisitRequest } from '@/types/visit';
 
 import { apiRequest } from './apiClient';
 
@@ -47,6 +47,31 @@ export const visitService = {
   async cancel(id: string): Promise<void> {
     await apiRequest<VisitRequest>(`/visits/${encodeURIComponent(id)}/cancel`, {
       method: 'POST',
+      auth: true,
+    });
+  },
+
+  // ── Owner side ──
+
+  /** Requests for my properties, grouped by tab like the tenant's list. */
+  async getIncomingGrouped(): Promise<Record<VisitTab, IncomingVisit[]>> {
+    const groups: Record<VisitTab, IncomingVisit[]> = { pending: [], upcoming: [], past: [] };
+    const result = await apiRequest<IncomingVisit[]>('/visits/incoming', { auth: true });
+    if (!result.ok) return groups;
+
+    result.data.forEach((v) => groups[tabOf(displayStatus(v))].push(v));
+    const time = (v: VisitRequest) => slotStart(v.date, v.time).getTime();
+    groups.pending.sort((a, b) => time(a) - time(b));
+    groups.upcoming.sort((a, b) => time(a) - time(b));
+    groups.past.sort((a, b) => time(b) - time(a));
+    return groups;
+  },
+
+  /** Owner: confirm or decline a pending request. */
+  async respond(id: string, decision: 'confirm' | 'decline'): Promise<Result<VisitRequest>> {
+    return apiRequest<VisitRequest>(`/visits/${encodeURIComponent(id)}/respond`, {
+      method: 'POST',
+      body: { decision },
       auth: true,
     });
   },
