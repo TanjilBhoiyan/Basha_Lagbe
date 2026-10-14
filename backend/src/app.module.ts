@@ -9,6 +9,7 @@ import { HealthModule } from './health/health.module.js';
 import { LocationsModule } from './locations/locations.module.js';
 import { PrismaModule } from './prisma/prisma.module.js';
 import { PropertiesModule } from './properties/properties.module.js';
+import { UploadsModule } from './uploads/uploads.module.js';
 import { VisitsModule } from './visits/visits.module.js';
 
 @Module({
@@ -22,6 +23,7 @@ import { VisitsModule } from './visits/visits.module.js';
     PropertiesModule,
     FavoritesModule,
     VisitsModule,
+    UploadsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

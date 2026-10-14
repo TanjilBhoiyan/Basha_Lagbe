@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { Modal, Pressable, StyleSheet, View } from 'react-native';
+import { Modal, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { colors, radius, SCREEN_PADDING, spacing } from '@/theme';
@@ -17,7 +17,7 @@ type Props<T> = {
   onClose: () => void;
 };
 
-/** Simple bottom sheet with a single-choice list. */
+/** Simple bottom sheet with a single-choice list (scrolls when long). */
 export function OptionSheet<T>({ visible, title, options, value, onSelect, onClose }: Props<T>) {
   const insets = useSafeAreaInsets();
 
@@ -29,26 +29,28 @@ export function OptionSheet<T>({ visible, title, options, value, onSelect, onClo
         <AppText variant="h3" style={styles.title}>
           {title}
         </AppText>
-        {options.map((option) => {
-          const selected = option.value === value;
-          return (
-            <Pressable
-              key={option.label}
-              onPress={() => {
-                onSelect(option.value);
-                onClose();
-              }}
-              style={({ pressed }) => [styles.option, pressed && styles.pressed]}
-              accessibilityRole="radio"
-              accessibilityState={{ selected }}
-            >
-              <AppText variant={selected ? 'bodyBold' : 'body'} color={selected ? 'primary' : 'text'}>
-                {option.label}
-              </AppText>
-              {selected ? <Ionicons name="checkmark" size={22} color={colors.primary} /> : null}
-            </Pressable>
-          );
-        })}
+        <ScrollView style={styles.list} bounces={false}>
+          {options.map((option) => {
+            const selected = option.value === value;
+            return (
+              <Pressable
+                key={option.label}
+                onPress={() => {
+                  onSelect(option.value);
+                  onClose();
+                }}
+                style={({ pressed }) => [styles.option, pressed && styles.pressed]}
+                accessibilityRole="radio"
+                accessibilityState={{ selected }}
+              >
+                <AppText variant={selected ? 'bodyBold' : 'body'} color={selected ? 'primary' : 'text'}>
+                  {option.label}
+                </AppText>
+                {selected ? <Ionicons name="checkmark" size={22} color={colors.primary} /> : null}
+              </Pressable>
+            );
+          })}
+        </ScrollView>
       </View>
     </Modal>
   );
@@ -72,6 +74,8 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
   },
   title: { marginBottom: spacing.sm },
+  /** Long lists (areas, floors) scroll inside the sheet. */
+  list: { maxHeight: 420 },
   option: {
     flexDirection: 'row',
     alignItems: 'center',

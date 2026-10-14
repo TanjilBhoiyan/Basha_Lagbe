@@ -1,9 +1,9 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 
 import { fromApiEnum } from '../common/enums.js';
-import type { Amenity, Furnishing, Prisma, TenantType } from '../generated/prisma/client.js';
+import type { Amenity, Facing, Furnishing, Prisma, TenantType } from '../generated/prisma/client.js';
 import { PrismaService } from '../prisma/prisma.service.js';
-import type { ListPropertiesQuery } from './properties.dto.js';
+import type { CreatePropertyDto, ListPropertiesQuery } from './properties.dto.js';
 import { PROPERTY_INCLUDE, toApiProperty, type ApiProperty } from './property.mapper.js';
 
 const DEFAULT_LIMIT = 20;
@@ -80,12 +80,44 @@ export class PropertiesService {
     return properties.map(toApiProperty);
   }
 
+  /**
+   * Owner: post a new listing. It starts as "pending" until our team reviews it.
+   * (Local testing: AUTO_APPROVE_LISTINGS=true in .env publishes it straight away.)
+   */
+  async create(ownerId: string, dto: CreatePropertyDto): Promise<ApiProperty> {
+    const location = await this.prisma.location.findUnique({ where: { id: dto.locationId } });
+    if (!location) throw new BadRequestException('Please select a valid area.');
+    if (dto.floorNumber > dto.totalFloors) {
+      throw new BadRequestException('Floor number cannot be higher than total floors.');
+    }
+
+    const { images, tenantTypes, amenities, furnishing, facing, utilityCost, availableFrom, ...rest } = dto;
+    const property = await this.prisma.property.create({
+      data: {
+        ...rest,
+        ownerId,
+        status: process.env.AUTO_APPROVE_LISTINGS === 'true' ? 'published' : 'pending',
+        areaLabel: location.name === location.city ? location.city : `${location.name}, ${location.city}`,
+        latitude: location.latitude,
+        longitude: location.longitude,
+        tenantTypes: tenantTypes.map((t) => fromApiEnum<TenantType>(t)),
+        amenities: [...new Set(amenities)].map((a) => fromApiEnum<Amenity>(a)),
+        furnishing: fromApiEnum<Furnishing>(furnishing),
+        facing: facing ? fromApiEnum<Facing>(facing) : null,
+        utilityIncluded: utilityCost === 'included',
+        availableFrom: new Date(availableFrom),
+        images: { create: images.map((url, sortOrder) => ({ url, sortOrder })) },
+      },
+      include: PROPERTY_INCLUDE,
+    });
+    return toApiProperty(property);
+  }
+
   /** Owner: mark a live listing as rented, or a rented one as available again. */
   async setStatus(ownerId: string, id: string, status: 'published' | 'rented'): Promise<ApiProperty> {
     const property = await this.prisma.property.findFirst({ where: { id, ownerId } });
     if (!property) throw new NotFoundException('Listing not found.');
-    const allowed =
-      (property.status === 'published' && status === 'rented') ||
+    const allowed = (property.status === 'published' && status === 'rented') ||
       (property.status === 'rented' && status === 'published');
     if (!allowed) {
       throw new BadRequestException(`A ${property.status} listing can't be changed to ${status}.`);

@@ -1,10 +1,14 @@
 import { HOME_CATEGORIES } from '@/features/home/categories';
-import type { PropertyType, TenantType } from '@/types/property';
+import type { Amenity, Facing, Furnishing, PropertyType, TenantType } from '@/types/property';
+import { floorLabel } from '@/utils/format';
 
 export const TITLE_MAX = 100;
 export const ADDRESS_MAX = 200;
+export const DESCRIPTION_MIN = 30;
+export const DESCRIPTION_MAX = 1000;
 export const RENT_MIN = 1000;
 export const RENT_MAX = 1000000;
+export const MAX_PHOTOS = 10;
 
 /** Who the owner wants to rent to. Mapped to `tenantTypes` when the listing is published. */
 export type RentalCategory =
@@ -32,22 +36,87 @@ export const PROPERTY_TYPE_OPTIONS = HOME_CATEGORIES.filter(
   (c): c is typeof c & { type: PropertyType } => c.type !== null,
 ).map((c) => ({ value: c.type, label: c.label }));
 
-/** Everything the owner fills in across the 4 steps (more fields come with steps 2–4). */
+export const FACING_OPTIONS: { value: Facing; label: string }[] = [
+  { value: 'south', label: 'South Facing' },
+  { value: 'south-east', label: 'South-East Facing' },
+  { value: 'south-west', label: 'South-West Facing' },
+  { value: 'east', label: 'East Facing' },
+  { value: 'west', label: 'West Facing' },
+  { value: 'north', label: 'North Facing' },
+  { value: 'north-east', label: 'North-East Facing' },
+  { value: 'north-west', label: 'North-West Facing' },
+];
+
+/** 0 = ground floor ... 30th floor. */
+export const FLOOR_OPTIONS = Array.from({ length: 31 }, (_, n) => ({ value: n, label: floorLabel(n) }));
+export const TOTAL_FLOOR_OPTIONS = Array.from({ length: 30 }, (_, i) => ({
+  value: i + 1,
+  label: `${i + 1} ${i === 0 ? 'floor' : 'floors'} building`,
+}));
+
+/** Offices and shops don't have bedrooms. */
+export const hasBedrooms = (type: PropertyType | null) => type !== 'office' && type !== 'shop';
+
+/** A photo picked from the phone (uploaded only when the owner submits). */
+export type DraftPhoto = { uri: string; mimeType?: string };
+
+/** Everything the owner fills in across the 4 steps. Saved on the phone as a draft. */
 export type PropertyDraft = {
+  // Step 1 — Basic Info
   title: string;
   type: PropertyType | null;
   rentalCategory: RentalCategory | null;
-  /** Full address — never shown publicly; shared with tenants after a visit is confirmed. */
+  locationId: string | null;
+  /** Area name shown in the form, e.g. "Mirpur, Dhaka". */
+  locationLabel: string;
+  /** Full address — never shown publicly. */
   address: string;
   monthlyRent: number | null;
+  // Step 2 — Property Details
+  bedrooms: number | null;
+  bathrooms: number | null;
+  sizeSqft: number | null;
+  floorNumber: number | null;
+  totalFloors: number | null;
+  facing: Facing | null;
+  furnishing: Furnishing | null;
+  /** "YYYY-MM-DD" */
+  availableFrom: string | null;
+  negotiable: boolean;
+  advanceMonths: number;
+  serviceCharge: number | null;
+  utilityCost: 'included' | 'separate';
+  minStayMonths: number;
+  description: string;
+  // Step 3 — Photos
+  photos: DraftPhoto[];
+  amenities: Amenity[];
 };
 
 export const EMPTY_DRAFT: PropertyDraft = {
   title: '',
   type: null,
   rentalCategory: null,
+  locationId: null,
+  locationLabel: '',
   address: '',
   monthlyRent: null,
+  bedrooms: null,
+  bathrooms: null,
+  sizeSqft: null,
+  floorNumber: null,
+  totalFloors: null,
+  facing: null,
+  furnishing: null,
+  availableFrom: null,
+  negotiable: false,
+  advanceMonths: 2,
+  serviceCharge: null,
+  utilityCost: 'separate',
+  minStayMonths: 0,
+  description: '',
+  photos: [],
+  amenities: [],
 };
 
 export type DraftErrors = Partial<Record<keyof PropertyDraft, string>>;
@@ -60,6 +129,7 @@ export function validateBasicInfo(d: PropertyDraft): DraftErrors {
 
   if (!d.type) errors.type = 'Please select a property type.';
   if (!d.rentalCategory) errors.rentalCategory = 'Please select who can rent.';
+  if (!d.locationId) errors.locationId = 'Please select the area.';
 
   const address = d.address.trim();
   if (!address) errors.address = 'Please enter the address.';
@@ -72,5 +142,68 @@ export function validateBasicInfo(d: PropertyDraft): DraftErrors {
   return errors;
 }
 
+export function validateDetails(d: PropertyDraft): DraftErrors {
+  const errors: DraftErrors = {};
+  if (!d.type) errors.type = 'Please select a property type.';
+  if (hasBedrooms(d.type) && !d.bedrooms) errors.bedrooms = 'Please select bedrooms.';
+  if (d.bathrooms === null) errors.bathrooms = 'Please select bathrooms.';
+
+  if (d.sizeSqft === null) errors.sizeSqft = 'Please enter the size.';
+  else if (d.sizeSqft < 50) errors.sizeSqft = 'Size looks too small. Please check it.';
+  else if (d.sizeSqft > 100000) errors.sizeSqft = 'Size looks too big. Please check it.';
+
+  if (d.floorNumber === null) errors.floorNumber = 'Please select the floor.';
+  if (d.totalFloors === null) errors.totalFloors = 'Please select total floors.';
+  else if (d.floorNumber !== null && d.floorNumber > d.totalFloors) {
+    errors.floorNumber = 'Floor can’t be higher than total floors.';
+  }
+
+  if (!d.furnishing) errors.furnishing = 'Please select furnishing.';
+  if (!d.availableFrom) errors.availableFrom = 'Please select when it’s available.';
+
+  const description = d.description.trim();
+  if (description.length < DESCRIPTION_MIN) {
+    errors.description = `Write at least ${DESCRIPTION_MIN} characters about the property.`;
+  }
+  return errors;
+}
+
+export function validatePhotos(d: PropertyDraft): DraftErrors {
+  return d.photos.length ? {} : { photos: 'Please add at least one photo.' };
+}
+
+/** Errors for one step (0-based). The last step (Preview) checks everything. */
+export function validateStep(step: number, d: PropertyDraft): DraftErrors {
+  if (step === 0) return validateBasicInfo(d);
+  if (step === 1) return validateDetails(d);
+  if (step === 2) return validatePhotos(d);
+  return {};
+}
+
+/** First step that still has a problem, or -1 when everything is filled in. */
+export function firstInvalidStep(d: PropertyDraft): number {
+  return [0, 1, 2].find((s) => Object.keys(validateStep(s, d)).length > 0) ?? -1;
+}
+
 export const hasDraftContent = (d: PropertyDraft) =>
-  Boolean(d.title || d.type || d.rentalCategory || d.address || d.monthlyRent);
+  Boolean(d.title || d.type || d.rentalCategory || d.address || d.monthlyRent || d.photos.length);
+
+/** "Right away" + the 1st of the next 3 months (rent usually starts on the 1st). */
+export function availableFromOptions(today = new Date()): { value: string; label: string }[] {
+  const iso = (d: Date) =>
+    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  const options = [{ value: iso(today), label: 'Right away' }];
+  for (let i = 1; i <= 3; i++) {
+    const d = new Date(today.getFullYear(), today.getMonth() + i, 1);
+    options.push({ value: iso(d), label: formatDraftDate(iso(d)) });
+  }
+  return options;
+}
+
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+/** "2026-11-01" -> "1 Nov 2026" */
+export function formatDraftDate(iso: string): string {
+  const [y, m, d] = iso.split('-').map(Number);
+  return `${d} ${MONTHS[m - 1]} ${y}`;
+}

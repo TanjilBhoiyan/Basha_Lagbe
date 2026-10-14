@@ -28,6 +28,11 @@ export class LocationsService {
     return this.withCounts(locations);
   }
 
+    /** Every area, grouped by city (for pickers like Add Property). */
+  async all(): Promise<ApiLocation[]> {
+    const locations = await this.prisma.location.findMany({ orderBy: [{ city: 'asc' }, { name: 'asc' }] });
+    return this.withCounts(locations);
+  }
   /** Case-insensitive match on area or city name. */
   async search(query: string): Promise<ApiLocation[]> {
     const q = query.trim();

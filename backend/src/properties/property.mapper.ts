@@ -34,6 +34,7 @@ export function toApiProperty(p: PropertyWithRelations) {
     sizeSqft: p.sizeSqft,
     floorNumber: p.floorNumber,
     totalFloors: p.totalFloors,
+    facing: p.facing ? toApiEnum(p.facing) : undefined,
     tenantTypes: p.tenantTypes.map(toApiEnum),
     furnishing: toApiEnum(p.furnishing),
     amenities: p.amenities.map(toApiEnum),

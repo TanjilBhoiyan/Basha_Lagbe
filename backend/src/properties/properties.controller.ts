@@ -8,12 +8,13 @@ import {
   Param,
   ParseUUIDPipe,
   Patch,
+  Post,
   Query,
   UseGuards,
 } from '@nestjs/common';
 
 import { CurrentUser, JwtAuthGuard, type JwtPayload } from '../auth/jwt-auth.guard.js';
-import { ListPropertiesQuery, UpdateListingStatusDto } from './properties.dto.js';
+import { CreatePropertyDto, ListPropertiesQuery, UpdateListingStatusDto } from './properties.dto.js';
 import { PropertiesService } from './properties.service.js';
 
 @Controller('properties')
@@ -31,6 +32,13 @@ export class PropertiesController {
   @UseGuards(JwtAuthGuard)
   mine(@CurrentUser() user: JwtPayload) {
     return this.properties.mine(user.sub);
+  }
+
+  /** POST /properties — owner posts a new listing (starts as "pending") */
+  @Post()
+  @UseGuards(JwtAuthGuard)
+  create(@CurrentUser() user: JwtPayload, @Body() dto: CreatePropertyDto) {
+    return this.properties.create(user.sub, dto);
   }
 
   /** GET /properties/:id */

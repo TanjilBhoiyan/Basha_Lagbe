@@ -25,3 +25,5 @@ Thumbs.db
 .idea/
 # Prisma generated client (rebuilt by `npm install` / `npm run prisma:generate`)
 /src/generated/prisma
+# Photos uploaded from the app (local testing only)
+public/uploads/

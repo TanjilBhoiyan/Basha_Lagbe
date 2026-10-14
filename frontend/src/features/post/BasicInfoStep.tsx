@@ -1,9 +1,11 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import { AppText, Input, OptionSheet } from '@/components/ui';
+import { locationService } from '@/services/locationService';
 import { colors, radius, spacing } from '@/theme';
+import type { Location } from '@/types/location';
 import { formatBdNumber } from '@/utils/format';
 import {
   ADDRESS_MAX,
@@ -22,7 +24,14 @@ type Props = {
 };
 
 export function BasicInfoStep({ draft, errors, onChange }: Props) {
-  const [sheet, setSheet] = useState<'type' | 'category' | null>(null);
+  const [sheet, setSheet] = useState<'type' | 'category' | 'area' | null>(null);
+  const [areas, setAreas] = useState<Location[]>([]);
+
+  useEffect(() => {
+    locationService.getAll().then(setAreas);
+  }, []);
+
+  const areaLabel = (l: Location) => (l.name === l.city ? l.city : `${l.name}, ${l.city}`);
 
   const typeLabel = PROPERTY_TYPE_OPTIONS.find((o) => o.value === draft.type)?.label;
   const categoryLabel = RENTAL_CATEGORY_OPTIONS.find((o) => o.value === draft.rentalCategory)?.label;
@@ -86,11 +95,23 @@ export function BasicInfoStep({ draft, errors, onChange }: Props) {
       </View>
 
       <View>
+        <FieldLabel required>Area</FieldLabel>
+        <SelectField
+          icon="map-marker-radius-outline"
+          placeholder="Select area"
+          value={draft.locationLabel || undefined}
+          error={errors.locationId}
+          onPress={() => setSheet('area')}
+          accessibilityLabel="Area"
+        />
+      </View>
+
+      <View>
         <FieldLabel required>Address</FieldLabel>
         <Input
           value={draft.address}
           onChangeText={(address) => onChange({ address })}
-          placeholder="Enter complete address"
+          placeholder="House, road, block, nearby landmark"
           maxLength={ADDRESS_MAX}
           multiline
           textAlignVertical="top"
@@ -100,7 +121,7 @@ export function BasicInfoStep({ draft, errors, onChange }: Props) {
           error={errors.address}
         />
         <FieldFooter
-          hint="Include area, road number, house number, and nearby landmark. Only the area is shown publicly."
+          hint="Only the area is shown publicly. The full address stays private."
           count={draft.address.length}
           max={ADDRESS_MAX}
         />
@@ -133,6 +154,17 @@ export function BasicInfoStep({ draft, errors, onChange }: Props) {
         options={RENTAL_CATEGORY_OPTIONS}
         value={draft.rentalCategory ?? undefined}
         onSelect={(rentalCategory) => onChange({ rentalCategory })}
+        onClose={() => setSheet(null)}
+      />
+      <OptionSheet
+        visible={sheet === 'area'}
+        title="Select Area"
+        options={areas.map((l) => ({ value: l.id, label: areaLabel(l) }))}
+        value={draft.locationId ?? undefined}
+        onSelect={(id) => {
+          const area = areas.find((l) => l.id === id);
+          if (area) onChange({ locationId: area.id, locationLabel: areaLabel(area) });
+        }}
         onClose={() => setSheet(null)}
       />
     </View>

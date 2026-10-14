@@ -6,6 +6,15 @@ export type TenantType = 'family' | 'bachelor-male' | 'bachelor-female' | 'stude
 
 export type Furnishing = 'furnished' | 'semi-furnished' | 'unfurnished';
 
+export type Facing =
+  | 'north'
+  | 'south'
+  | 'east'
+  | 'west'
+  | 'north-east'
+  | 'north-west'
+  | 'south-east'
+  | 'south-west';
 export type Amenity =
   | 'wifi'
   | 'parking'
@@ -59,6 +68,8 @@ export type Property = {
   sizeSqft: number;
   floorNumber: number;
   totalFloors: number;
+    /** Which way the main side / balcony faces. */
+  facing?: Facing;
   description: string;
   tenantTypes: TenantType[];
   furnishing: Furnishing;

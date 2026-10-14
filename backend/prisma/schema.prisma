@@ -118,7 +118,17 @@ enum Amenity {
   balcony
   fire_safety @map("fire-safety")
 }
-
+/// Which way the main side / balcony faces (popular in Bangladesh: south facing).
+enum Facing {
+  north
+  south
+  east
+  west
+  north_east @map("north-east")
+  north_west @map("north-west")
+  south_east @map("south-east")
+  south_west @map("south-west")
+}
 enum ListingStatus {
   pending // waiting for admin review
   published
@@ -138,6 +148,7 @@ model Property {
   status                ListingStatus   @default(pending)
   /// Public area text, e.g. "Mirpur 10, Dhaka". The exact address is never shown publicly.
   areaLabel             String          @map("area_label")
+  address               String?
   /// Approximate public map position
   latitude              Float
   longitude             Float
@@ -153,6 +164,7 @@ model Property {
   sizeSqft              Int             @map("size_sqft")
   floorNumber           Int             @default(0) @map("floor_number")
   totalFloors           Int             @default(1) @map("total_floors")
+  facing                Facing?
   tenantTypes           TenantType[]    @map("tenant_types")
   furnishing            Furnishing      @default(unfurnished)
   amenities             Amenity[]

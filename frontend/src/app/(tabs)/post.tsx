@@ -13,21 +13,25 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { BrandHeader } from '@/components/brand/BrandHeader';
 import { AppText, Button } from '@/components/ui';
 import { BasicInfoStep } from '@/features/post/BasicInfoStep';
 import {
   EMPTY_DRAFT,
+  firstInvalidStep,
   hasDraftContent,
-  validateBasicInfo,
+  validateStep,
   type DraftErrors,
   type PropertyDraft,
 } from '@/features/post/draft';
+import { PhotosStep } from '@/features/post/PhotosStep';
+import { PreviewStep } from '@/features/post/PreviewStep';
+import { PropertyDetailsStep } from '@/features/post/PropertyDetailsStep';
 import { StepIndicator } from '@/features/post/StepIndicator';
 import { postDraftService } from '@/services/postDraftService';
+import { propertyPostService } from '@/services/propertyPostService';
 import { colors, radius, SCREEN_PADDING, spacing } from '@/theme';
 
-const STEPS = ['Basic\nInformation', 'Property\nDetails', 'Photos &\nAmenities', 'Review &\nPublish'];
+const STEPS = ['Basic Info', 'Property\nDetails', 'Photos', 'Preview'];
 const LAST = STEPS.length - 1;
 
 export default function PostScreen() {
@@ -39,11 +43,13 @@ export default function PostScreen() {
   const [triedNext, setTriedNext] = useState(false);
   const [loaded, setLoaded] = useState(false);
   const [restored, setRestored] = useState(false);
+  /** "Uploading photos 2/5…" while submitting; null when idle. */
+  const [submitting, setSubmitting] = useState<string | null>(null);
 
   useEffect(() => {
     postDraftService.load().then(({ draft: saved, step: savedStep }) => {
       setDraft(saved);
-      setStep(savedStep);
+      setStep(Math.min(savedStep, LAST));
       setRestored(hasDraftContent(saved));
       setLoaded(true);
     });
@@ -59,7 +65,7 @@ export default function PostScreen() {
   const update = (patch: Partial<PropertyDraft>) => {
     const next = { ...draft, ...patch };
     setDraft(next);
-    if (triedNext && step === 0) setErrors(validateBasicInfo(next));
+    if (triedNext) setErrors(validateStep(step, next));
   };
 
   const goToStep = (s: number) => {
@@ -69,21 +75,48 @@ export default function PostScreen() {
     scrollRef.current?.scrollTo({ y: 0, animated: false });
   };
 
-  const next = () => {
-    if (step === 0) {
-      const e = validateBasicInfo(draft);
-      setTriedNext(true);
-      setErrors(e);
-      if (Object.keys(e).length) {
-        scrollRef.current?.scrollTo({ y: 0, animated: true });
-        return;
-      }
+  /** Shows the step's errors; returns true when the step is OK. */
+  const checkStep = (s: number) => {
+    const e = validateStep(s, draft);
+    setTriedNext(true);
+    setErrors(e);
+    if (Object.keys(e).length) {
+      scrollRef.current?.scrollTo({ y: 0, animated: true });
+      return false;
     }
-    if (step === LAST) {
-      Alert.alert('Coming soon', 'Publishing will be available once all steps are built.');
+    return true;
+  };
+
+  const submit = async () => {
+    const bad = firstInvalidStep(draft);
+    if (bad !== -1) {
+      goToStep(bad);
+      setTimeout(() => checkStep(bad), 0);
       return;
     }
-    goToStep(step + 1);
+    setSubmitting('Submitting…');
+    const result = await propertyPostService.submit(draft, (done, total) =>
+      setSubmitting(done < total ? `Uploading photos ${done + 1}/${total}…` : 'Saving listing…'),
+    );
+    setSubmitting(null);
+    if (!result.ok) {
+      Alert.alert('Could not submit', result.error);
+      return;
+    }
+    await postDraftService.clear();
+    setDraft(EMPTY_DRAFT);
+    setRestored(false);
+    goToStep(0);
+    Alert.alert('Property submitted', 'We will review it soon. You can see it on your dashboard.');
+    router.replace('/dashboard');
+  };
+
+  const next = () => {
+    if (step === LAST) {
+      submit();
+      return;
+    }
+    if (checkStep(step)) goToStep(step + 1);
   };
 
   const back = () => (step > 0 ? goToStep(step - 1) : router.navigate('/home'));
@@ -113,6 +146,22 @@ export default function PostScreen() {
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
+      <View style={styles.header}>
+        <Pressable
+          onPress={back}
+          hitSlop={12}
+          disabled={!!submitting}
+          accessibilityRole="button"
+          accessibilityLabel="Go back"
+        >
+          <Ionicons name="chevron-back" size={26} color={colors.text} />
+        </Pressable>
+        <AppText style={styles.title} accessibilityRole="header">
+          Add Property
+        </AppText>
+        <View style={styles.headerSpacer} />
+      </View>
+
       <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <ScrollView
           ref={scrollRef}
@@ -120,20 +169,9 @@ export default function PostScreen() {
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          <BrandHeader />
-
-          <View style={styles.titleRow}>
-            <Pressable onPress={back} hitSlop={12} accessibilityRole="button" accessibilityLabel="Go back">
-              <Ionicons name="arrow-back" size={26} color={colors.text} />
-            </Pressable>
-            <AppText style={styles.title} accessibilityRole="header">
-              Add Property
-            </AppText>
-          </View>
-
           <StepIndicator steps={STEPS} current={step} />
 
-          {restored ? (
+          {restored && step === 0 ? (
             <View style={styles.restored}>
               <Ionicons name="document-text-outline" size={18} color={colors.primaryDeep} />
               <AppText variant="caption" style={styles.flex}>
@@ -147,30 +185,35 @@ export default function PostScreen() {
             </View>
           ) : null}
 
-          {step === 0 ? (
-            <BasicInfoStep draft={draft} errors={errors} onChange={update} />
-          ) : (
-            <View style={styles.placeholder}>
-              <Ionicons name="construct-outline" size={40} color={colors.primary} />
-              <AppText variant="h3" align="center">
-                {STEPS[step].replace('\n', ' ')}
-              </AppText>
-              <AppText color="textSecondary" align="center">
-                This step will be built with its design next.
-              </AppText>
-            </View>
-          )}
+          {step === 0 ? <BasicInfoStep draft={draft} errors={errors} onChange={update} /> : null}
+          {step === 1 ? <PropertyDetailsStep draft={draft} errors={errors} onChange={update} /> : null}
+          {step === 2 ? <PhotosStep draft={draft} errors={errors} onChange={update} /> : null}
+          {step === 3 ? <PreviewStep draft={draft} onEdit={goToStep} /> : null}
         </ScrollView>
 
         <View style={styles.footer}>
           {step > 0 ? (
-            <Button title="Back" variant="outline" fullWidth={false} onPress={back} style={styles.backBtn} />
+            <Button
+              title="Back"
+              variant="outline"
+              fullWidth={false}
+              onPress={back}
+              disabled={!!submitting}
+              style={styles.backBtn}
+            />
           ) : null}
           <Button
-            title={step === LAST ? 'Publish' : 'Next'}
+            title={submitting ?? (step === LAST ? 'Submit Property' : 'Next')}
             onPress={next}
+            disabled={!!submitting}
             style={styles.nextBtn}
-            rightIcon={<Ionicons name="arrow-forward" size={20} color={colors.white} />}
+            rightIcon={
+              submitting ? (
+                <ActivityIndicator color={colors.white} />
+              ) : step === LAST ? undefined : (
+                <Ionicons name="arrow-forward" size={20} color={colors.white} />
+              )
+            }
           />
         </View>
       </KeyboardAvoidingView>
@@ -183,9 +226,15 @@ const styles = StyleSheet.create({
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.backgroundMint },
   flex: { flex: 1 },
   bold: { fontWeight: '700' },
-  content: { padding: SCREEN_PADDING, paddingBottom: spacing.xl, gap: spacing.lg },
-  titleRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.lg },
-  title: { fontSize: 26, lineHeight: 32, fontWeight: '800', color: colors.text },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: SCREEN_PADDING,
+    paddingVertical: spacing.md,
+  },
+  title: { flex: 1, textAlign: 'center', fontSize: 20, lineHeight: 26, fontWeight: '800', color: colors.text },
+  headerSpacer: { width: 26 },
+  content: { padding: SCREEN_PADDING, paddingTop: spacing.xs, paddingBottom: spacing.xl, gap: spacing.lg },
   restored: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -193,15 +242,6 @@ const styles = StyleSheet.create({
     padding: spacing.md,
     borderRadius: radius.md,
     backgroundColor: colors.primaryLight,
-  },
-  placeholder: {
-    alignItems: 'center',
-    gap: spacing.sm,
-    padding: spacing.xxl,
-    borderRadius: radius.lg,
-    backgroundColor: colors.white,
-    borderWidth: 1,
-    borderColor: colors.border,
   },
   footer: {
     flexDirection: 'row',
