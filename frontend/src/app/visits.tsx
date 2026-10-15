@@ -13,10 +13,10 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { AppText, EmptyState, SegmentedTabs } from '@/components/ui';
+import { openChatForProperty } from '@/features/chat/openChat';
 import { addVisitToCalendar } from '@/features/visit/addVisitToCalendar';
 import { VisitCard, type VisitAction } from '@/features/visit/VisitCard';
 import { displayStatus, type VisitTab } from '@/features/visit/visitStatus';
-import { chatService } from '@/services/chatService';
 import { propertyService } from '@/services/propertyService';
 import { visitService } from '@/services/visitService';
 import { colors, SCREEN_PADDING, spacing } from '@/theme';
@@ -77,8 +77,7 @@ export default function MyVisitsScreen() {
 
   const openProperty = (id: string) => router.push({ pathname: '/property/[id]', params: { id } });
   const openContact = (id: string) => router.push({ pathname: '/contact/[id]', params: { id } });
-  const openChat = (id: string) =>
-    router.push({ pathname: '/chat/[id]', params: { id: chatService.conversationIdFor(id) } });
+  const openChat = (id: string) => openChatForProperty(id);
 
   const addToCalendar = async (visit: VisitRequest, property: Property) => {
     const ok = await addVisitToCalendar(visit, property);

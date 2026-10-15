@@ -35,6 +35,10 @@ model User {
   properties       Property[]
   favorites        Favorite[]
   visits           Visit[]
+  /// Chats where this user is the tenant / the owner
+  tenantChats      Conversation[] @relation("ChatTenant")
+  ownerChats       Conversation[] @relation("ChatOwner")
+  messages         Message[]
 
   @@map("users")
 }
@@ -118,6 +122,7 @@ enum Amenity {
   balcony
   fire_safety @map("fire-safety")
 }
+
 /// Which way the main side / balcony faces (popular in Bangladesh: south facing).
 enum Facing {
   north
@@ -129,6 +134,7 @@ enum Facing {
   south_east @map("south-east")
   south_west @map("south-west")
 }
+
 enum ListingStatus {
   pending // waiting for admin review
   published
@@ -148,6 +154,7 @@ model Property {
   status                ListingStatus   @default(pending)
   /// Public area text, e.g. "Mirpur 10, Dhaka". The exact address is never shown publicly.
   areaLabel             String          @map("area_label")
+  /// Exact address (house, road). Never shown publicly.
   address               String?
   /// Approximate public map position
   latitude              Float
@@ -175,6 +182,7 @@ model Property {
   images                PropertyImage[]
   favorites             Favorite[]
   visits                Visit[]
+  conversations         Conversation[]
   createdAt             DateTime        @default(now()) @map("created_at")
   updatedAt             DateTime        @updatedAt @map("updated_at")
 
@@ -207,7 +215,6 @@ model Favorite {
   @@map("favorites")
 }
 
-
 // ─── Visits ─────────────────────────────────────────────
 
 enum VisitStatus {
@@ -236,4 +243,42 @@ model Visit {
   @@index([tenantId, createdAt])
   @@index([propertyId, status])
   @@map("visits")
+}
+
+// ─── Chat ───────────────────────────────────────────────
+
+/// One chat between a tenant and the owner about one property.
+model Conversation {
+  id               String    @id @default(uuid(7)) @db.Uuid
+  propertyId       String    @map("property_id") @db.Uuid
+  property         Property  @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  tenantId         String    @map("tenant_id") @db.Uuid
+  tenant           User      @relation("ChatTenant", fields: [tenantId], references: [id], onDelete: Cascade)
+  ownerId          String    @map("owner_id") @db.Uuid
+  owner            User      @relation("ChatOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  /// Sorts the inbox (newest chat first)
+  lastMessageAt    DateTime  @default(now()) @map("last_message_at")
+  /// Messages sent before these times have been read by that person
+  tenantLastReadAt DateTime? @map("tenant_last_read_at")
+  ownerLastReadAt  DateTime? @map("owner_last_read_at")
+  createdAt        DateTime  @default(now()) @map("created_at")
+  messages         Message[]
+
+  @@unique([propertyId, tenantId])
+  @@index([tenantId, lastMessageAt])
+  @@index([ownerId, lastMessageAt])
+  @@map("conversations")
+}
+
+model Message {
+  id             String       @id @default(uuid(7)) @db.Uuid
+  conversationId String       @map("conversation_id") @db.Uuid
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  senderId       String       @map("sender_id") @db.Uuid
+  sender         User         @relation(fields: [senderId], references: [id], onDelete: Cascade)
+  text           String
+  createdAt      DateTime     @default(now()) @map("created_at")
+
+  @@index([conversationId, createdAt])
+  @@map("messages")
 }

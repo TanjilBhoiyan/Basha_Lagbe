@@ -3,11 +3,17 @@ import { Image, Pressable, StyleSheet, View } from 'react-native';
 
 import { AppText } from '@/components/ui';
 import { colors, radius, spacing } from '@/theme';
-import type { Property } from '@/types/property';
+import type { ChatSummary } from '@/types/chat';
 import { formatTaka } from '@/utils/format';
 
 /** Compact listing card at the top of a chat; tap opens the listing. */
-export function ChatPropertyCard({ property, onPress }: { property: Property; onPress: () => void }) {
+export function ChatPropertyCard({
+  property,
+  onPress,
+}: {
+  property: ChatSummary['property'];
+  onPress: () => void;
+}) {
   return (
     <Pressable
       onPress={onPress}
@@ -15,7 +21,13 @@ export function ChatPropertyCard({ property, onPress }: { property: Property; on
       accessibilityRole="button"
       accessibilityLabel={`Open listing ${property.title}`}
     >
-      <Image source={property.images[0]} style={styles.image} />
+      {property.image ? (
+        <Image source={property.image} style={styles.image} />
+      ) : (
+        <View style={[styles.image, styles.noImage]}>
+          <Ionicons name="home-outline" size={28} color={colors.primary} />
+        </View>
+      )}
       <View style={styles.body}>
         <AppText variant="bodyBold" numberOfLines={1}>
           {property.title}
@@ -53,6 +65,7 @@ const styles = StyleSheet.create({
   },
   pressed: { opacity: 0.85 },
   image: { width: 100, height: 70, borderRadius: radius.md },
+  noImage: { alignItems: 'center', justifyContent: 'center', backgroundColor: colors.primaryLight },
   body: { flex: 1, gap: 2 },
   row: { flexDirection: 'row', alignItems: 'center', gap: 3 },
   rent: { fontSize: 17, lineHeight: 22, fontWeight: '800', color: colors.primaryDeep },

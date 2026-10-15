@@ -24,3 +24,14 @@ export function dayLabel(iso: string, now = new Date()) {
   const label = `${WEEKDAYS[d.getDay()]}, ${d.getDate()} ${MONTHS[d.getMonth()]}`;
   return d.getFullYear() === now.getFullYear() ? label : `${label} ${d.getFullYear()}`;
 }
+
+/** Messages list: "10:42 AM" today, "Yesterday", "Mon" this week, else "12 Oct". */
+export function formatListTime(iso: string, now = new Date()) {
+  const d = new Date(iso);
+  if (dayKey(iso) === dayKey(now.toISOString())) return formatChatTime(iso);
+  const days = Math.floor((new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime() - d.getTime()) / 86400000);
+  if (days < 1) return 'Yesterday';
+  if (days < 6) return WEEKDAYS[d.getDay()];
+  const label = `${d.getDate()} ${MONTHS[d.getMonth()]}`;
+  return d.getFullYear() === now.getFullYear() ? label : `${label} ${d.getFullYear()}`;
+}

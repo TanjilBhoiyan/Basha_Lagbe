@@ -1,142 +1,113 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { io, type Socket } from 'socket.io-client';
 
-import { MOCK_ONLINE_PROPERTY_IDS, mockOwnerReply, seedMessages } from '@/mocks/chats';
-import { MOCK_PROPERTIES } from '@/mocks/properties';
 import type { Result } from '@/types/auth';
-import type { ChatMessage, ChatState, MessageStatus } from '@/types/chat';
+import type { ChatMessage, ChatSummary } from '@/types/chat';
 
-const CHATS_KEY = 'basha-lagbe:chats';
+import { API_URL, apiImage, apiRequest } from './apiClient';
+import { session } from './session';
+
 export const MESSAGE_MAX_LENGTH = 1000;
 
-type Listener = (state: ChatState) => void;
+type ApiChat = Omit<ChatSummary, 'property'> & {
+  property: Omit<ChatSummary['property'], 'image'> & { image: string | null };
+};
 
-// In-memory copy of every conversation, saved to AsyncStorage on change.
-let store: Record<string, ChatMessage[]> | null = null;
-const typing: Record<string, boolean> = {};
-const listeners: Record<string, Set<Listener>> = {};
-const replyTimers: Record<string, ReturnType<typeof setTimeout>[]> = {};
+const toSummary = ({ property, ...c }: ApiChat): ChatSummary => ({
+  ...c,
+  property: { ...property, image: property.image ? apiImage(property.image) : null },
+});
 
-async function load() {
-  if (store) return store;
-  try {
-    const raw = await AsyncStorage.getItem(CHATS_KEY);
-    store = raw ? (JSON.parse(raw) as Record<string, ChatMessage[]>) : {};
-  } catch {
-    store = {};
-  }
-  return store;
+type ReadEvent = { conversationId: string; readAt: string };
+
+const messageListeners = new Set<(m: ChatMessage) => void>();
+const readListeners = new Set<(e: ReadEvent) => void>();
+/** Anything that changes the inbox (new message, chat read) — the list and the tab badge refresh. */
+const inboxListeners = new Set<() => void>();
+
+let socket: Socket | null = null;
+let socketToken: string | null = null;
+
+const notifyInbox = () => inboxListeners.forEach((l) => l());
+
+/** Real-time connection, opened once per login. A new login (different token) reconnects. */
+async function connect() {
+  const token = await session.getToken();
+  if (!token) return;
+  if (socket && socketToken === token) return;
+  socket?.disconnect();
+  socketToken = token;
+  socket = io(API_URL, { auth: { token }, transports: ['websocket'] });
+  socket.on('chat:message', (m: ChatMessage) => {
+    messageListeners.forEach((l) => l(m));
+    notifyInbox();
+  });
+  socket.on('chat:read', (e: ReadEvent) => {
+    readListeners.forEach((l) => l(e));
+    notifyInbox();
+  });
+  socket.on('chat:read-by-me', notifyInbox);
 }
 
-async function save() {
-  try {
-    await AsyncStorage.setItem(CHATS_KEY, JSON.stringify(store ?? {}));
-  } catch {
-    // ignore
-  }
-}
-
-const propertyIdOf = (conversationId: string) => conversationId.replace(/^c_/, '');
-
-function emit(conversationId: string) {
-  const state: ChatState = {
-    messages: store?.[conversationId] ?? [],
-    ownerTyping: typing[conversationId] ?? false,
+const listen = <T>(set: Set<T>, listener: T) => {
+  set.add(listener);
+  connect();
+  return () => {
+    set.delete(listener);
   };
-  listeners[conversationId]?.forEach((l) => l(state));
-}
+};
 
-function setStatus(conversationId: string, status: MessageStatus) {
-  if (!store) return;
-  store[conversationId] = (store[conversationId] ?? []).map((m) =>
-    m.sender === 'me' && m.status !== 'read' ? { ...m, status } : m,
-  );
-  emit(conversationId);
-  save();
-}
-
-/** MOCK: the owner "reads" and answers a few seconds later. */
-function simulateOwner(conversationId: string, lastText: string) {
-  replyTimers[conversationId]?.forEach(clearTimeout);
-  const online = MOCK_ONLINE_PROPERTY_IDS.includes(propertyIdOf(conversationId));
-  const property = MOCK_PROPERTIES.find((p) => p.id === propertyIdOf(conversationId));
-  const later = (ms: number, fn: () => void) => setTimeout(fn, ms);
-
-  replyTimers[conversationId] = [
-    later(800, () => setStatus(conversationId, 'delivered')),
-    ...(online
-      ? [
-          later(1800, () => setStatus(conversationId, 'read')),
-          later(2500, () => {
-            typing[conversationId] = true;
-            emit(conversationId);
-          }),
-          later(4500, () => {
-            typing[conversationId] = false;
-            const reply: ChatMessage = {
-              id: `m_${Date.now()}`,
-              conversationId,
-              sender: 'owner',
-              text: mockOwnerReply(lastText, property),
-              createdAt: new Date().toISOString(),
-              status: 'read',
-            };
-            store![conversationId] = [...(store![conversationId] ?? []), reply];
-            emit(conversationId);
-            save();
-          }),
-        ]
-      : []),
-  ];
-}
-
-// MOCK service — will use the backend API + WebSocket later.
+/** Chat between a tenant and an owner about one listing (backend: /chats + Socket.IO). */
 export const chatService = {
-  /** One conversation per property for the logged-in tenant. */
-  conversationIdFor(propertyId: string) {
-    return `c_${propertyId}`;
+  connect,
+
+  /** Tenant taps "Message" on a listing: opens (or reuses) the chat with its owner. */
+  async openForProperty(propertyId: string): Promise<Result<ChatSummary>> {
+    const result = await apiRequest<ApiChat>('/chats', { method: 'POST', auth: true, body: { propertyId } });
+    return result.ok ? { ok: true, data: toSummary(result.data) } : result;
   },
 
-  propertyIdOf,
-
-  isOwnerOnline(propertyId: string) {
-    return MOCK_ONLINE_PROPERTY_IDS.includes(propertyId);
+  /** Messages tab, newest first. */
+  async list(): Promise<ChatSummary[]> {
+    const result = await apiRequest<ApiChat[]>('/chats', { auth: true });
+    return result.ok ? result.data.map(toSummary) : [];
   },
 
-  async getMessages(conversationId: string): Promise<ChatMessage[]> {
-    const s = await load();
-    if (!s[conversationId]) {
-      s[conversationId] = seedMessages(conversationId, propertyIdOf(conversationId));
-      save();
-    }
-    return s[conversationId];
+  async get(id: string): Promise<ChatSummary | null> {
+    const result = await apiRequest<ApiChat>(`/chats/${encodeURIComponent(id)}`, { auth: true });
+    return result.ok ? toSummary(result.data) : null;
   },
 
-  /** Live updates (new messages, ticks, typing). Returns an unsubscribe function. */
-  subscribe(conversationId: string, listener: Listener) {
-    (listeners[conversationId] ??= new Set()).add(listener);
-    return () => {
-      listeners[conversationId]?.delete(listener);
-    };
+  /** Unread messages in all my chats (tab badge). */
+  async unreadCount(): Promise<number> {
+    const result = await apiRequest<{ count: number }>('/chats/unread-count', { auth: true });
+    return result.ok ? result.data.count : 0;
   },
 
-  async send(conversationId: string, text: string): Promise<Result<ChatMessage>> {
+  /** Oldest first. `before` (ISO time) loads the previous page. */
+  async getMessages(id: string, before?: string): Promise<Result<ChatMessage[]>> {
+    const query = before ? `?before=${encodeURIComponent(before)}` : '';
+    return apiRequest<ChatMessage[]>(`/chats/${encodeURIComponent(id)}/messages${query}`, { auth: true });
+  },
+
+  async send(id: string, text: string): Promise<Result<ChatMessage>> {
     const body = text.trim();
     if (!body) return { ok: false, error: 'Message is empty.' };
     if (body.length > MESSAGE_MAX_LENGTH) return { ok: false, error: 'Message is too long.' };
-
-    const s = await load();
-    const message: ChatMessage = {
-      id: `m_${Date.now()}`,
-      conversationId,
-      sender: 'me',
-      text: body,
-      createdAt: new Date().toISOString(),
-      status: 'sent',
-    };
-    s[conversationId] = [...(s[conversationId] ?? []), message];
-    emit(conversationId);
-    await save();
-    simulateOwner(conversationId, body);
-    return { ok: true, data: message };
+    return apiRequest<ChatMessage>(`/chats/${encodeURIComponent(id)}/messages`, {
+      method: 'POST',
+      auth: true,
+      body: { text: body },
+    });
   },
+
+  /** I've seen this chat (the other person gets green ticks, my badge goes down). */
+  async markRead(id: string): Promise<void> {
+    await apiRequest<null>(`/chats/${encodeURIComponent(id)}/read`, { method: 'POST', auth: true });
+  },
+
+  /** A new message in any of my chats (mine from another device too). Returns unsubscribe. */
+  onMessage: (listener: (m: ChatMessage) => void) => listen(messageListeners, listener),
+  /** The other person read a chat. */
+  onRead: (listener: (e: ReadEvent) => void) => listen(readListeners, listener),
+  onInboxChange: (listener: () => void) => listen(inboxListeners, listener),
 };

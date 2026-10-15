@@ -1,7 +1,9 @@
-export type ChatSender = 'me' | 'owner';
+import type { ImageSourcePropType } from 'react-native';
 
-/** sent = reached our server, delivered = reached the owner's phone, read = owner opened it. */
-export type MessageStatus = 'sent' | 'delivered' | 'read';
+export type ChatSender = 'me' | 'them';
+
+/** sent = saved on our server, read = the other person opened the chat. */
+export type MessageStatus = 'sent' | 'read';
 
 export type ChatMessage = {
   id: string;
@@ -13,8 +15,22 @@ export type ChatMessage = {
   status: MessageStatus;
 };
 
-/** What a chat screen listens to. */
-export type ChatState = {
-  messages: ChatMessage[];
-  ownerTyping: boolean;
+export type ChatRole = 'tenant' | 'owner';
+
+/** One chat (a row on the Messages tab, and the header of a chat screen). */
+export type ChatSummary = {
+  id: string;
+  /** Am I the tenant or the owner in this chat? */
+  myRole: ChatRole;
+  property: {
+    id: string;
+    title: string;
+    areaLabel: string;
+    monthlyRent: number;
+    image: ImageSourcePropType | null;
+  };
+  /** The other person. */
+  other: { id: string; name: string; phone: string; isVerified: boolean; role: ChatRole };
+  lastMessage: { text: string; mine: boolean; createdAt: string; read: boolean } | null;
+  unreadCount: number;
 };

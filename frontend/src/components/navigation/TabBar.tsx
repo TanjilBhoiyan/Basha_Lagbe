@@ -20,11 +20,11 @@ const TAB_CONFIG: Record<string, { label: string; icon: IconName; activeIcon: Ic
 };
 
 type Props = TabBarProps & {
-  /** Route names that should show a red dot (e.g. unread messages). */
-  badges?: string[];
+  /** Red count badge per route name, e.g. { messages: 3 }. 0 hides it. */
+  badges?: Record<string, number>;
 };
 
-export function TabBar({ state, navigation, badges = [] }: Props) {
+export function TabBar({ state, navigation, badges = {} }: Props) {
   const insets = useSafeAreaInsets();
 
   return (
@@ -61,7 +61,11 @@ export function TabBar({ state, navigation, badges = [] }: Props) {
             ) : (
               <View>
                 <Ionicons name={focused ? config.activeIcon : config.icon} size={24} color={color} />
-                {badges.includes(route.name) ? <View style={styles.badge} /> : null}
+                {badges[route.name] ? (
+                  <View style={styles.badge}>
+                    <AppText style={styles.badgeText}>{badges[route.name] > 99 ? '99+' : badges[route.name]}</AppText>
+                  </View>
+                ) : null}
               </View>
             )}
             <AppText variant="small" style={[styles.label, { color }]}>
@@ -98,15 +102,19 @@ const styles = StyleSheet.create({
   },
   badge: {
     position: 'absolute',
-    top: -1,
-    right: -3,
-    width: 9,
-    height: 9,
+    top: -6,
+    right: -10,
+    minWidth: 18,
+    height: 18,
+    paddingHorizontal: 4,
     borderRadius: radius.full,
     backgroundColor: colors.danger,
     borderWidth: 1.5,
     borderColor: colors.white,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
+  badgeText: { fontSize: 10, lineHeight: 13, fontWeight: '800', color: colors.white },
   indicator: {
     width: 28,
     height: 3,

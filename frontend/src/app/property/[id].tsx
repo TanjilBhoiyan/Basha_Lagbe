@@ -16,14 +16,13 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import { AppText, EmptyState } from '@/components/ui';
 import { AMENITY_OPTIONS } from '@/features/filters/filters';
+import { openChatForProperty } from '@/features/chat/openChat';
 import { OwnerCard } from '@/features/property/OwnerCard';
 import { PhotoGallery } from '@/features/property/PhotoGallery';
 import { propertyService } from '@/services/propertyService';
 import { colors, radius, SCREEN_PADDING, spacing } from '@/theme';
 import type { Property } from '@/types/property';
 import { floorLabel, formatBdNumber, formatTaka, plural } from '@/utils/format';
-import { chatService } from '@/services/chatService';
-
 
 type IoniconName = ComponentProps<typeof Ionicons>['name'];
 
@@ -241,9 +240,7 @@ export default function PropertyDetailsScreen() {
           icon="chatbubble-ellipses"
           label="Message"
           flex={1.25}
-          onPress={() =>
-            router.push({ pathname: '/chat/[id]', params: { id: chatService.conversationIdFor(property.id) } })
-          }
+          onPress={() => openChatForProperty(property.id)}
         />
         <ActionButton
           icon="calendar-outline"

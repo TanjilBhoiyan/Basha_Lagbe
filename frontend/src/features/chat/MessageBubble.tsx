@@ -9,19 +9,20 @@ import { formatChatTime } from './chatFormat';
 
 type Props = {
   message: ChatMessage;
-  ownerName: string;
-  /** Show the owner's avatar (first message of a run); otherwise keep the space. */
+  /** The other person's name (for their avatar). */
+  otherName: string;
+  /** Show their avatar (first message of a run); otherwise keep the space. */
   showAvatar: boolean;
 };
 
-export function MessageBubble({ message, ownerName, showAvatar }: Props) {
+export function MessageBubble({ message, otherName, showAvatar }: Props) {
   const mine = message.sender === 'me';
 
   return (
     <View style={[styles.row, mine ? styles.rowMine : styles.rowTheirs]}>
       {!mine ? (
         <View style={styles.avatarSlot}>
-          {showAvatar ? <OwnerAvatar name={ownerName} verified={false} size={36} /> : null}
+          {showAvatar ? <OwnerAvatar name={otherName} verified={false} size={36} /> : null}
         </View>
       ) : null}
 
@@ -46,8 +47,8 @@ function StatusTick({ status }: { status: ChatMessage['status'] }) {
     <Ionicons
       name="checkmark-done"
       size={16}
-      color={status === 'read' ? colors.primary : colors.textSecondary}
-      accessibilityLabel={status === 'read' ? 'Read' : 'Delivered'}
+      color={colors.primary}
+      accessibilityLabel="Read"
     />
   );
 }
