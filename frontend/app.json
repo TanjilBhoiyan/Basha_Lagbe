@@ -1,18 +1,18 @@
 {
   "expo": {
-    "name": "Basha Lagbe",
-    "slug": "basha-lagbe",
-    "scheme": "bashalagbe",
+    "name": "Basa Lagbe",
+    "slug": "basa-lagbe",
+    "scheme": "basalagbe",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "com.bashalagbe.app"
+      "bundleIdentifier": "com.basalagbe.app"
     },
     "android": {
-      "package": "com.bashalagbe.app",
+      "package": "com.basalagbe.app",
       "adaptiveIcon": {
         "backgroundColor": "#FFFFFF",
         "foregroundImage": "./assets/android-icon-foreground.png",
@@ -31,7 +31,7 @@
         "expo-location",
         
         {
-          "locationWhenInUsePermission": "Basha Lagbe uses your location to show rental properties near you."
+          "locationWhenInUsePermission": "Basa Lagbe uses your location to show rental properties near you."
         }
       ],
       [

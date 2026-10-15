@@ -3,7 +3,7 @@
  * never hard-code the brand name in screens.
  */
 export const APP_CONFIG = {
-  name: 'Basha Lagbe',
+  name: 'Basa Lagbe',
   tagline: 'Find Your Perfect Home in Bangladesh',
   shortTagline: 'Find Your Next Home',
   currency: {

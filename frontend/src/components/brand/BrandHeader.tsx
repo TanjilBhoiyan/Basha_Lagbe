@@ -25,6 +25,6 @@ export function BrandHeader() {
 
 const styles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  logo: { width: 40, height: 37 },
+  logo: { width: 58, height: 37 },
   name: { fontSize: 20, lineHeight: 24, fontWeight: '800', color: colors.primaryDeep },
 });

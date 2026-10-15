@@ -252,7 +252,7 @@ const styles = StyleSheet.create({
   },
   headerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   brand: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  logo: { width: 34, height: 32, resizeMode: 'contain' },
+  logo: { width: 50, height: 32, resizeMode: 'contain' },
   name: { fontSize: 22, lineHeight: 28, fontWeight: '800', color: colors.primaryDeep },
   location: { flexDirection: 'row', alignItems: 'center', gap: 4, maxWidth: '45%' },
   locationText: { flexShrink: 1 },
