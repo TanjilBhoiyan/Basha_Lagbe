@@ -23,7 +23,7 @@ export function AreaCard({ location, onPress }: Props) {
         {location.name}
       </AppText>
       <AppText variant="small" color="textSecondary" style={styles.count}>
-        {formatBdNumber(location.listingCount)} listings
+        {formatBdNumber(location.listingCount)} {location.listingCount === 1 ? 'listing' : 'listings'}
       </AppText>
     </Pressable>
   );

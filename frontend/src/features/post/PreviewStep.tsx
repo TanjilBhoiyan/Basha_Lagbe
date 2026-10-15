@@ -20,11 +20,13 @@ type Props = {
   draft: PropertyDraft;
   /** Jump back to a step (0-based) to change something. */
   onEdit: (step: number) => void;
+  /** Editing an existing listing (changes the note at the bottom). */
+  editing?: boolean;
 };
 
 type Row = [label: string, value: string];
 
-export function PreviewStep({ draft: d, onEdit }: Props) {
+export function PreviewStep({ draft: d, onEdit, editing }: Props) {
   const label = <T,>(options: { value: T; label: string }[], value: T | null) =>
     options.find((o) => o.value === value)?.label ?? '—';
   const months = (n: number) => (n ? `${n} month${n === 1 ? '' : 's'}` : 'None');
@@ -63,7 +65,10 @@ export function PreviewStep({ draft: d, onEdit }: Props) {
   const amenities = AMENITY_OPTIONS.filter((a) => d.amenities.includes(a.value)).map((a) => a.label);
 
   return (
-    <StepCard title="Preview & Submit" subtitle="Review your property details before submitting">
+    <StepCard
+      title={editing ? 'Preview & Save' : 'Preview & Submit'}
+      subtitle={editing ? 'Check your changes before saving' : 'Review your property details before submitting'}
+    >
       {d.photos[0] ? (
         <View>
           <Image source={{ uri: d.photos[0].uri }} style={styles.hero} accessibilityLabel="Cover photo" />
@@ -94,16 +99,18 @@ export function PreviewStep({ draft: d, onEdit }: Props) {
         </View>
       ) : null}
 
-      <View style={styles.note}>
-        <MaterialCommunityIcons name="shield-check-outline" size={22} color={colors.info} />
-        <AppText variant="caption" style={styles.noteText}>
-          Our team will review your listing before it goes live (usually within 24 hours). Until then it shows as{' '}
-          <AppText variant="caption" style={styles.bold}>
-            Pending
-          </AppText>{' '}
-          on your dashboard.
-        </AppText>
-      </View>
+      {editing ? null : (
+        <View style={styles.note}>
+          <MaterialCommunityIcons name="shield-check-outline" size={22} color={colors.info} />
+          <AppText variant="caption" style={styles.noteText}>
+            Your listing goes{' '}
+            <AppText variant="caption" style={styles.bold}>
+              live right away
+            </AppText>{' '}
+            after you submit. You can mark it as rented or delete it anytime from your dashboard.
+          </AppText>
+        </View>
+      )}
     </StepCard>
   );
 }

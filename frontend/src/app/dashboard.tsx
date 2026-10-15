@@ -104,7 +104,7 @@ export default function OwnerDashboardScreen() {
     const options: { text: string; style?: 'cancel' | 'destructive'; onPress?: () => void }[] = [
       {
         text: 'Edit details',
-        onPress: () => Alert.alert('Coming soon', 'Editing will open the Add Property form once all its steps are built.'),
+        onPress: () => router.push({ pathname: '/edit-property/[id]', params: { id: listing.propertyId } }),
       },
     ];
     if (listing.status === 'published') {
@@ -208,7 +208,7 @@ export default function OwnerDashboardScreen() {
   );
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top']}>
+    <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
       <View style={styles.header}>
         <Pressable onPress={goBack} hitSlop={12} accessibilityRole="button" accessibilityLabel="Go back">
           <Ionicons name="arrow-back" size={26} color={colors.text} />

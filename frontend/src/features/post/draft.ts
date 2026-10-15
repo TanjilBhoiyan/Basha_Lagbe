@@ -1,5 +1,5 @@
 import { HOME_CATEGORIES } from '@/features/home/categories';
-import type { Amenity, Facing, Furnishing, PropertyType, TenantType } from '@/types/property';
+import type { Amenity, Facing, Furnishing, Property, PropertyType, TenantType } from '@/types/property';
 import { floorLabel } from '@/utils/format';
 
 export const TITLE_MAX = 100;
@@ -57,8 +57,11 @@ export const TOTAL_FLOOR_OPTIONS = Array.from({ length: 30 }, (_, i) => ({
 /** Offices and shops don't have bedrooms. */
 export const hasBedrooms = (type: PropertyType | null) => type !== 'office' && type !== 'shop';
 
-/** A photo picked from the phone (uploaded only when the owner submits). */
-export type DraftPhoto = { uri: string; mimeType?: string };
+/**
+ * A photo in the form. New photos from the phone are uploaded when the owner submits;
+ * photos already on the server (when editing) keep their `remoteUrl` and aren't uploaded again.
+ */
+export type DraftPhoto = { uri: string; mimeType?: string; remoteUrl?: string };
 
 /** Everything the owner fills in across the 4 steps. Saved on the phone as a draft. */
 export type PropertyDraft = {
@@ -183,6 +186,44 @@ export function validateStep(step: number, d: PropertyDraft): DraftErrors {
 /** First step that still has a problem, or -1 when everything is filled in. */
 export function firstInvalidStep(d: PropertyDraft): number {
   return [0, 1, 2].find((s) => Object.keys(validateStep(s, d)).length > 0) ?? -1;
+}
+
+/** Turns a saved listing back into a form draft (Edit Property). */
+export function draftFromProperty(
+  p: Omit<Property, 'images' | 'owner' | 'isVerified'> & { address: string },
+  photos: DraftPhoto[],
+): PropertyDraft {
+  const sameTenants = (list: TenantType[]) =>
+    list.length === p.tenantTypes.length && list.every((t) => p.tenantTypes.includes(t));
+  // A listing for several tenant types was posted as "Anyone".
+  const rentalCategory =
+    RENTAL_CATEGORY_OPTIONS.find((o) => sameTenants(o.tenants))?.value ?? (p.tenantTypes.length > 1 ? 'anyone' : null);
+
+  return {
+    title: p.title,
+    type: p.type,
+    rentalCategory,
+    locationId: p.locationId,
+    locationLabel: p.areaLabel,
+    address: p.address,
+    monthlyRent: p.monthlyRent,
+    bedrooms: hasBedrooms(p.type) ? Math.min(p.bedrooms, 4) : 0,
+    bathrooms: Math.min(Math.max(p.bathrooms, 1), 4),
+    sizeSqft: p.sizeSqft,
+    floorNumber: p.floorNumber,
+    totalFloors: p.totalFloors,
+    facing: p.facing ?? null,
+    furnishing: p.furnishing,
+    availableFrom: p.availableFrom,
+    negotiable: p.negotiable,
+    advanceMonths: p.advanceMonths,
+    serviceCharge: p.serviceCharge,
+    utilityCost: p.utilityCost,
+    minStayMonths: p.minStayMonths,
+    description: p.description,
+    photos,
+    amenities: p.amenities,
+  };
 }
 
 export const hasDraftContent = (d: PropertyDraft) =>

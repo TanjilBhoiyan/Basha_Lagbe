@@ -1,3 +1,4 @@
+import { draftFromProperty, type PropertyDraft } from '@/features/post/draft';
 import type { Result } from '@/types/auth';
 import type { ListingStatus, OwnerListing } from '@/types/listing';
 import type { Property } from '@/types/property';
@@ -31,6 +32,17 @@ export const ownerListingService = {
       acc.properties[p.id] = { ...p, images: images.map(apiImage) };
       return acc;
     }, empty);
+  },
+
+  /** One of my listings as an Add Property draft, for the Edit form (includes the private address). */
+  async getDraft(propertyId: string): Promise<PropertyDraft | null> {
+    const result = await apiRequest<ApiMyProperty & { address: string }>(
+      `/properties/mine/${encodeURIComponent(propertyId)}`,
+      { auth: true },
+    );
+    if (!result.ok) return null;
+    const { images, ...p } = result.data;
+    return draftFromProperty(p, images.map((url) => ({ uri: apiImage(url).uri, remoteUrl: url })));
   },
 
   /** Mark as rented, or available (published) again. */

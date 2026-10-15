@@ -3,8 +3,14 @@ import { BadRequestException, Injectable, NotFoundException } from '@nestjs/comm
 import { fromApiEnum } from '../common/enums.js';
 import type { Amenity, Facing, Furnishing, Prisma, TenantType } from '../generated/prisma/client.js';
 import { PrismaService } from '../prisma/prisma.service.js';
-import type { CreatePropertyDto, ListPropertiesQuery } from './properties.dto.js';
-import { PROPERTY_INCLUDE, toApiProperty, type ApiProperty } from './property.mapper.js';
+import {
+  UPLOADED_IMAGE,
+  type CreatePropertyDto,
+  type ListPropertiesQuery,
+  type PropertyFieldsDto,
+  type UpdatePropertyDto,
+} from './properties.dto.js';
+import { PROPERTY_INCLUDE, toApiProperty, toOwnerProperty, type ApiProperty, type OwnerProperty } from './property.mapper.js';
 
 const DEFAULT_LIMIT = 20;
 
@@ -80,37 +86,74 @@ export class PropertiesService {
     return properties.map(toApiProperty);
   }
 
-  /**
-   * Owner: post a new listing. It starts as "pending" until our team reviews it.
-   * (Local testing: AUTO_APPROVE_LISTINGS=true in .env publishes it straight away.)
-   */
+  /** Owner: one of my listings with its private address (for the Edit form). */
+  async mineOne(ownerId: string, id: string): Promise<OwnerProperty> {
+    const property = await this.prisma.property.findFirst({ where: { id, ownerId }, include: PROPERTY_INCLUDE });
+    if (!property) throw new NotFoundException('Listing not found.');
+    return toOwnerProperty(property);
+  }
+
+  /** Owner: post a new listing. It goes live straight away (bad listings can be removed later). */
   async create(ownerId: string, dto: CreatePropertyDto): Promise<ApiProperty> {
+    const data = await this.fieldsToData(dto);
+    const property = await this.prisma.property.create({
+      data: {
+        ...data,
+        ownerId,
+        status: 'published',
+        images: { create: dto.images.map((url, sortOrder) => ({ url, sortOrder })) },
+      },
+      include: PROPERTY_INCLUDE,
+    });
+    return toApiProperty(property);
+  }
+
+  /**
+   * Owner: edit my listing. Photos are replaced by the new list (in order);
+   * each one must be newly uploaded or already belong to this listing. Status stays the same.
+   */
+  async update(ownerId: string, id: string, dto: UpdatePropertyDto): Promise<ApiProperty> {
+    const existing = await this.prisma.property.findFirst({ where: { id, ownerId }, include: { images: true } });
+    if (!existing) throw new NotFoundException('Listing not found.');
+
+    const current = new Set(existing.images.map((i) => i.url));
+    if (dto.images.some((url) => !current.has(url) && !UPLOADED_IMAGE.test(url))) {
+      throw new BadRequestException('Please upload the photos again.');
+    }
+
+    const data = await this.fieldsToData(dto);
+    const [, property] = await this.prisma.$transaction([
+      this.prisma.propertyImage.deleteMany({ where: { propertyId: id } }),
+      this.prisma.property.update({
+        where: { id },
+        data: { ...data, images: { create: dto.images.map((url, sortOrder) => ({ url, sortOrder })) } },
+        include: PROPERTY_INCLUDE,
+      }),
+    ]);
+    return toApiProperty(property);
+  }
+
+  /** Form fields -> database columns (shared by create and update). */
+  private async fieldsToData(dto: PropertyFieldsDto) {
     const location = await this.prisma.location.findUnique({ where: { id: dto.locationId } });
     if (!location) throw new BadRequestException('Please select a valid area.');
     if (dto.floorNumber > dto.totalFloors) {
       throw new BadRequestException('Floor number cannot be higher than total floors.');
     }
 
-    const { images, tenantTypes, amenities, furnishing, facing, utilityCost, availableFrom, ...rest } = dto;
-    const property = await this.prisma.property.create({
-      data: {
-        ...rest,
-        ownerId,
-        status: process.env.AUTO_APPROVE_LISTINGS === 'true' ? 'published' : 'pending',
-        areaLabel: location.name === location.city ? location.city : `${location.name}, ${location.city}`,
-        latitude: location.latitude,
-        longitude: location.longitude,
-        tenantTypes: tenantTypes.map((t) => fromApiEnum<TenantType>(t)),
-        amenities: [...new Set(amenities)].map((a) => fromApiEnum<Amenity>(a)),
-        furnishing: fromApiEnum<Furnishing>(furnishing),
-        facing: facing ? fromApiEnum<Facing>(facing) : null,
-        utilityIncluded: utilityCost === 'included',
-        availableFrom: new Date(availableFrom),
-        images: { create: images.map((url, sortOrder) => ({ url, sortOrder })) },
-      },
-      include: PROPERTY_INCLUDE,
-    });
-    return toApiProperty(property);
+    const { tenantTypes, amenities, furnishing, facing, utilityCost, availableFrom, ...rest } = dto;
+    return {
+      ...rest,
+      areaLabel: location.name === location.city ? location.city : `${location.name}, ${location.city}`,
+      latitude: location.latitude,
+      longitude: location.longitude,
+      tenantTypes: tenantTypes.map((t) => fromApiEnum<TenantType>(t)),
+      amenities: [...new Set(amenities)].map((a) => fromApiEnum<Amenity>(a)),
+      furnishing: fromApiEnum<Furnishing>(furnishing),
+      facing: facing ? fromApiEnum<Facing>(facing) : null,
+      utilityIncluded: utilityCost === 'included',
+      availableFrom: new Date(availableFrom),
+    };
   }
 
   /** Owner: mark a live listing as rented, or a rented one as available again. */

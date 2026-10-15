@@ -53,3 +53,10 @@ export function toApiProperty(p: PropertyWithRelations) {
 }
 
 export type ApiProperty = ReturnType<typeof toApiProperty>;
+
+/** The owner's own view of a listing: public fields + status + the private address. */
+export function toOwnerProperty(p: PropertyWithRelations) {
+  return { ...toApiProperty(p), address: p.address ?? '' };
+}
+
+export type OwnerProperty = ReturnType<typeof toOwnerProperty>;

@@ -29,11 +29,19 @@
       "expo-status-bar",
       [
         "expo-location",
+        
         {
           "locationWhenInUsePermission": "Basha Lagbe uses your location to show rental properties near you."
         }
       ],
-      "expo-secure-store"
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "usesCleartextTraffic": true
+          }
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true

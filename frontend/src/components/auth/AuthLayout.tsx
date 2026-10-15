@@ -8,7 +8,7 @@ import {
   useWindowDimensions,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { BrandHeader } from '@/components/brand/BrandHeader';
 import { AppText } from '@/components/ui';
@@ -29,6 +29,9 @@ type Props = {
 export function AuthLayout({ title, subtitle, children }: Props) {
   const { width } = useWindowDimensions();
   const heroImageWidth = width * 0.68;
+  // Android draws the app behind the navigation buttons (edge-to-edge),
+  // so the white card gets extra bottom space to keep "Register" visible.
+  const { bottom } = useSafeAreaInsets();
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
@@ -62,7 +65,7 @@ export function AuthLayout({ title, subtitle, children }: Props) {
             </View>
           </View>
 
-          <View style={styles.card}>{children}</View>
+          <View style={[styles.card, { paddingBottom: spacing.xxl + bottom }]}>{children}</View>
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -91,7 +94,6 @@ const styles = StyleSheet.create({
     borderTopRightRadius: radius.xl + 4,
     paddingHorizontal: SCREEN_PADDING + 4,
     paddingTop: spacing.xl,
-    paddingBottom: spacing.xxl,
     gap: spacing.lg,
   },
 });

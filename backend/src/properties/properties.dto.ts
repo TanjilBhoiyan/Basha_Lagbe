@@ -120,8 +120,8 @@ export class UpdateListingStatusDto {
   status: 'published' | 'rented';
 }
 
-/** POST /properties — what the Add Property form sends. */
-export class CreatePropertyDto {
+/** Every field of the Add/Edit Property form except photos. */
+export class PropertyFieldsDto {
   @IsString()
   @MinLength(10)
   @MaxLength(100)
@@ -217,14 +217,27 @@ export class CreatePropertyDto {
   @MinLength(30)
   @MaxLength(1000)
   description: string;
+}
 
+/** A photo URL returned by POST /uploads/property-image. */
+export const UPLOADED_IMAGE = /^\/static\/uploads\/properties\/[0-9a-f-]{36}\.(jpg|png|webp)$/;
+
+/** POST /properties — what the Add Property form sends. */
+export class CreatePropertyDto extends PropertyFieldsDto {
   /** URLs returned by POST /uploads/property-image, first one is the cover */
   @IsArray()
   @ArrayMinSize(1)
   @ArrayMaxSize(10)
-  @Matches(/^\/static\/uploads\/properties\/[0-9a-f-]{36}\.(jpg|png|webp)$/, {
-    each: true,
-    message: 'Please upload the photos again.',
-  })
+  @Matches(UPLOADED_IMAGE, { each: true, message: 'Please upload the photos again.' })
+  images: string[];
+}
+
+/** PUT /properties/:id — same form; photos may also be the listing's existing ones (checked in the service). */
+export class UpdatePropertyDto extends PropertyFieldsDto {
+  @IsArray()
+  @ArrayMinSize(1)
+  @ArrayMaxSize(10)
+  @IsString({ each: true })
+  @MaxLength(300, { each: true })
   images: string[];
 }

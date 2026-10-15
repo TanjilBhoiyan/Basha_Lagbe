@@ -9,12 +9,13 @@ import {
   ParseUUIDPipe,
   Patch,
   Post,
+  Put,
   Query,
   UseGuards,
 } from '@nestjs/common';
 
 import { CurrentUser, JwtAuthGuard, type JwtPayload } from '../auth/jwt-auth.guard.js';
-import { CreatePropertyDto, ListPropertiesQuery, UpdateListingStatusDto } from './properties.dto.js';
+import { CreatePropertyDto, ListPropertiesQuery, UpdateListingStatusDto, UpdatePropertyDto } from './properties.dto.js';
 import { PropertiesService } from './properties.service.js';
 
 @Controller('properties')
@@ -34,7 +35,14 @@ export class PropertiesController {
     return this.properties.mine(user.sub);
   }
 
-  /** POST /properties — owner posts a new listing (starts as "pending") */
+  /** GET /properties/mine/:id — one of my listings with its private address (must stay above ":id") */
+  @Get('mine/:id')
+  @UseGuards(JwtAuthGuard)
+  mineOne(@CurrentUser() user: JwtPayload, @Param('id', new ParseUUIDPipe()) id: string) {
+    return this.properties.mineOne(user.sub, id);
+  }
+
+  /** POST /properties — owner posts a new listing (goes live straight away) */
   @Post()
   @UseGuards(JwtAuthGuard)
   create(@CurrentUser() user: JwtPayload, @Body() dto: CreatePropertyDto) {
@@ -45,6 +53,17 @@ export class PropertiesController {
   @Get(':id')
   findOne(@Param('id', new ParseUUIDPipe()) id: string) {
     return this.properties.findOne(id);
+  }
+
+  /** PUT /properties/:id — owner edits their listing (whole form) */
+  @Put(':id')
+  @UseGuards(JwtAuthGuard)
+  update(
+    @CurrentUser() user: JwtPayload,
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @Body() dto: UpdatePropertyDto,
+  ) {
+    return this.properties.update(user.sub, id, dto);
   }
 
   /** PATCH /properties/:id/status { status: "rented" | "published" } — owner only */

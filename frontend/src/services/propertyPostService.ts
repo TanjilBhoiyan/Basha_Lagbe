@@ -66,45 +66,75 @@ async function uploadPhoto(photo: DraftPhoto, index: number): Promise<Result<str
   }
 }
 
-/** Posts the Add Property form: uploads the photos, then creates the listing. */
-export const propertyPostService = {
-  async submit(d: PropertyDraft, onProgress?: (done: number, total: number) => void): Promise<Result<{ id: string }>> {
-    const images: string[] = [];
-    for (const [i, photo] of d.photos.entries()) {
-      onProgress?.(i, d.photos.length);
-      const uploaded = await uploadPhoto(photo, i);
-      if (!uploaded.ok) return uploaded;
-      images.push(uploaded.data);
+/** Uploads the new photos (in order) and returns every photo's server URL. */
+async function photoUrls(
+  photos: DraftPhoto[],
+  onProgress?: (done: number, total: number) => void,
+): Promise<Result<string[]>> {
+  const urls: string[] = [];
+  for (const [i, photo] of photos.entries()) {
+    onProgress?.(i, photos.length);
+    if (photo.remoteUrl) {
+      urls.push(photo.remoteUrl); // already on the server (editing)
+      continue;
     }
-    onProgress?.(d.photos.length, d.photos.length);
+    const uploaded = await uploadPhoto(photo, i);
+    if (!uploaded.ok) return uploaded;
+    urls.push(uploaded.data);
+  }
+  onProgress?.(photos.length, photos.length);
+  return { ok: true, data: urls };
+}
 
-    return apiRequest<{ id: string }>('/properties', {
-      method: 'POST',
+/** Form draft -> request body for POST /properties and PUT /properties/:id. */
+function toBody(d: PropertyDraft, images: string[]) {
+  return {
+    title: d.title.trim(),
+    type: d.type,
+    tenantTypes: RENTAL_CATEGORY_OPTIONS.find((o) => o.value === d.rentalCategory)?.tenants ?? [],
+    locationId: d.locationId,
+    address: d.address.trim(),
+    monthlyRent: d.monthlyRent,
+    negotiable: d.negotiable,
+    advanceMonths: d.advanceMonths,
+    serviceCharge: d.serviceCharge ?? 0,
+    utilityCost: d.utilityCost,
+    minStayMonths: d.minStayMonths,
+    bedrooms: hasBedrooms(d.type) ? d.bedrooms : 0,
+    bathrooms: d.bathrooms,
+    sizeSqft: d.sizeSqft,
+    floorNumber: d.floorNumber,
+    totalFloors: d.totalFloors,
+    facing: d.facing ?? undefined,
+    furnishing: d.furnishing,
+    amenities: d.amenities,
+    availableFrom: d.availableFrom,
+    description: d.description.trim(),
+    images,
+  };
+}
+
+/** Posts or saves the Add/Edit Property form: uploads new photos, then sends the form. */
+export const propertyPostService = {
+  /** New listing. */
+  async submit(d: PropertyDraft, onProgress?: (done: number, total: number) => void): Promise<Result<{ id: string }>> {
+    const images = await photoUrls(d.photos, onProgress);
+    if (!images.ok) return images;
+    return apiRequest<{ id: string }>('/properties', { method: 'POST', auth: true, body: toBody(d, images.data) });
+  },
+
+  /** Save changes to an existing listing. */
+  async update(
+    propertyId: string,
+    d: PropertyDraft,
+    onProgress?: (done: number, total: number) => void,
+  ): Promise<Result<{ id: string }>> {
+    const images = await photoUrls(d.photos, onProgress);
+    if (!images.ok) return images;
+    return apiRequest<{ id: string }>(`/properties/${encodeURIComponent(propertyId)}`, {
+      method: 'PUT',
       auth: true,
-      body: {
-        title: d.title.trim(),
-        type: d.type,
-        tenantTypes: RENTAL_CATEGORY_OPTIONS.find((o) => o.value === d.rentalCategory)?.tenants ?? [],
-        locationId: d.locationId,
-        address: d.address.trim(),
-        monthlyRent: d.monthlyRent,
-        negotiable: d.negotiable,
-        advanceMonths: d.advanceMonths,
-        serviceCharge: d.serviceCharge ?? 0,
-        utilityCost: d.utilityCost,
-        minStayMonths: d.minStayMonths,
-        bedrooms: hasBedrooms(d.type) ? d.bedrooms : 0,
-        bathrooms: d.bathrooms,
-        sizeSqft: d.sizeSqft,
-        floorNumber: d.floorNumber,
-        totalFloors: d.totalFloors,
-        facing: d.facing ?? undefined,
-        furnishing: d.furnishing,
-        amenities: d.amenities,
-        availableFrom: d.availableFrom,
-        description: d.description.trim(),
-        images,
-      },
+      body: toBody(d, images.data),
     });
   },
 };
