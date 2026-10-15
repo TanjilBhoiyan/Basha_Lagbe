@@ -4,6 +4,7 @@ import { Animated, Image, StyleSheet, useWindowDimensions, View } from 'react-na
 
 import { AppText } from '@/components/ui';
 import { APP_CONFIG } from '@/config/app';
+import { authService } from '@/services/authService';
 import { goToAppHome } from '@/services/navigation';
 import { onboardingStorage } from '@/services/onboardingStorage';
 import { session } from '@/services/session';
@@ -11,6 +12,25 @@ import { colors, spacing } from '@/theme';
 
 const SPLASH_DURATION_MS = 2200;
 const CITY_ASPECT_RATIO = 1080 / 855;
+
+/**
+ * Logged in only if we have a saved user AND a token the server still accepts.
+ * - Expired/invalid token: the server says 401, apiRequest clears the session -> Login.
+ * - No internet / server down: keep the saved login so the app still opens.
+ */
+async function restoreSession(): Promise<boolean> {
+  const [user, token] = await Promise.all([session.getUser(), session.getToken()]);
+  if (!user || !token) {
+    await session.clear(); // half-saved login, e.g. from the old mock version
+    return false;
+  }
+  const me = await authService.me();
+  if (me.ok) {
+    await session.save(me.data); // refresh name/phone in case they changed
+    return true;
+  }
+  return (await session.getToken()) !== null;
+}
 
 export default function SplashScreen() {
   const opacity = useRef(new Animated.Value(0)).current;
@@ -27,18 +47,12 @@ export default function SplashScreen() {
     ]).start();
 
     // Read stored state while the splash is showing, then route.
-        const stateReady = Promise.all([
-      session.getUser(),
-      session.getToken(),
-      onboardingStorage.isComplete(),
-    ]);
+    const stateReady = Promise.all([restoreSession(), onboardingStorage.isComplete()]);
     let cancelled = false;
     const timer = setTimeout(async () => {
-      const [user, token, onboardingDone] = await stateReady;
+      const [loggedIn, onboardingDone] = await stateReady;
       if (cancelled) return;
-      // Logged in only if we have both the user and a server token
-      // (an old mock login saved a user without a token).
-      if (user && token) {
+      if (loggedIn) {
         await goToAppHome();
       } else {
         router.replace(onboardingDone ? '/login' : '/onboarding');
