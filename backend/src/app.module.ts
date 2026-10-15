@@ -10,6 +10,7 @@ import { HealthModule } from './health/health.module.js';
 import { LocationsModule } from './locations/locations.module.js';
 import { PrismaModule } from './prisma/prisma.module.js';
 import { PropertiesModule } from './properties/properties.module.js';
+import { SmsModule } from './sms/sms.module.js';
 import { UploadsModule } from './uploads/uploads.module.js';
 import { VisitsModule } from './visits/visits.module.js';
 
@@ -18,6 +19,7 @@ import { VisitsModule } from './visits/visits.module.js';
     // Loads backend/.env into process.env for the whole app.
     ConfigModule.forRoot({ isGlobal: true }),
     PrismaModule,
+    SmsModule,
     HealthModule,
     AuthModule,
     LocationsModule,

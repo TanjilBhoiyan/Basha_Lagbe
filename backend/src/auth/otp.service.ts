@@ -5,12 +5,20 @@ import { ConfigService } from '@nestjs/config';
 
 import { OtpPurpose } from '../generated/prisma/client.js';
 import { PrismaService } from '../prisma/prisma.service.js';
+import { SmsService } from '../sms/sms.service.js';
 
 const OTP_LENGTH = 6;
 const OTP_TTL_MS = 5 * 60 * 1000; // a code works for 5 minutes
 const OTP_MAX_ATTEMPTS = 5;
 const OTP_RESEND_COOLDOWN_MS = 60 * 1000; // same as the app's resend timer
 const MOCK_CODE = '123456';
+
+/** The SMS text. English only: Bangla SMS costs about 2x the credits. */
+const SMS_TEXT: Record<OtpPurpose, (code: string) => string> = {
+  REGISTER: (code) => `Your Basa Lagbe verification code is ${code}. It expires in 5 minutes. Do not share it with anyone.`,
+  RESET_PASSWORD: (code) =>
+    `Your Basa Lagbe password reset code is ${code}. It expires in 5 minutes. Do not share it with anyone.`,
+};
 
 @Injectable()
 export class OtpService {
@@ -20,13 +28,17 @@ export class OtpService {
 
   constructor(
     private readonly prisma: PrismaService,
+    private readonly sms: SmsService,
     config: ConfigService,
   ) {
     this.mock = config.get('OTP_MOCK') === 'true';
     this.secret = config.getOrThrow<string>('JWT_SECRET');
   }
 
-  /** Creates a new code (older unused codes stop working) and "sends" it. */
+  /**
+   * Creates a new code (older unused codes stop working) and sends it by SMS.
+   * OTP_MOCK=true: the code is always 123456 and no SMS is sent (development).
+   */
   async send(phone: string, purpose: OtpPurpose): Promise<void> {
     const last = await this.prisma.otpCode.findFirst({
       where: { phone, purpose },
@@ -39,7 +51,7 @@ export class OtpService {
 
     const code = this.mock ? MOCK_CODE : String(randomInt(0, 10 ** OTP_LENGTH)).padStart(OTP_LENGTH, '0');
 
-    await this.prisma.$transaction([
+    const [, saved] = await this.prisma.$transaction([
       this.prisma.otpCode.deleteMany({ where: { phone, purpose, consumedAt: null } }),
       this.prisma.otpCode.create({
         data: { phone, purpose, codeHash: this.hash(code), expiresAt: new Date(Date.now() + OTP_TTL_MS) },
@@ -48,9 +60,15 @@ export class OtpService {
 
     if (this.mock) {
       this.logger.warn(`[MOCK SMS] OTP for +880${phone} (${purpose}): ${code}`);
-    } else {
-      // TODO: send the code with a real SMS gateway (SSL Wireless, BulkSMSBD...).
-      this.logger.error('OTP_MOCK is false but no SMS gateway is configured yet.');
+      return;
+    }
+
+    try {
+      await this.sms.send(phone, SMS_TEXT[purpose](code));
+    } catch (e) {
+      // Not sent: remove the code so the user can try again right away (no 60s wait).
+      await this.prisma.otpCode.delete({ where: { id: saved.id } }).catch(() => undefined);
+      throw e;
     }
   }
 
