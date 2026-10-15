@@ -30,7 +30,7 @@ export function OwnerContactCard({ owner, onCall, onMessage }: Props) {
   return (
     <View style={styles.card}>
       <View style={styles.top}>
-        <OwnerAvatar name={owner.name} verified={owner.isVerified} size={64} />
+        <OwnerAvatar name={owner.name} verified={owner.isVerified} photo={owner.avatarUrl} size={64} />
 
         <View style={styles.info}>
           <AppText style={styles.name} numberOfLines={2}>

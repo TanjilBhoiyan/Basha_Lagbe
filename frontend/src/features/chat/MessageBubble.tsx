@@ -11,18 +11,20 @@ type Props = {
   message: ChatMessage;
   /** The other person's name (for their avatar). */
   otherName: string;
+  /** The other person's profile photo URL (initials when null). */
+  otherPhoto?: string | null;
   /** Show their avatar (first message of a run); otherwise keep the space. */
   showAvatar: boolean;
 };
 
-export function MessageBubble({ message, otherName, showAvatar }: Props) {
+export function MessageBubble({ message, otherName, otherPhoto, showAvatar }: Props) {
   const mine = message.sender === 'me';
 
   return (
     <View style={[styles.row, mine ? styles.rowMine : styles.rowTheirs]}>
       {!mine ? (
         <View style={styles.avatarSlot}>
-          {showAvatar ? <OwnerAvatar name={otherName} verified={false} size={36} /> : null}
+          {showAvatar ? <OwnerAvatar name={otherName} verified={false} photo={otherPhoto} size={36} /> : null}
         </View>
       ) : null}
 

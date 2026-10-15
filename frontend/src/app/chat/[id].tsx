@@ -189,7 +189,7 @@ export default function ChatScreen() {
       </View>
 
       <View style={styles.otherRow}>
-        <OwnerAvatar name={other.name} verified={false} size={56} />
+        <OwnerAvatar name={other.name} verified={false} photo={other.avatarUrl} size={56} />
         <View style={styles.flex}>
           <View style={styles.nameRow}>
             <AppText variant="h3" style={styles.bold} numberOfLines={1}>
@@ -261,7 +261,12 @@ export default function ChatScreen() {
                   </AppText>
                 </View>
               ) : (
-                <MessageBubble message={item.message} otherName={other.name} showAvatar={item.showAvatar} />
+                <MessageBubble
+                  message={item.message}
+                  otherName={other.name}
+                  otherPhoto={other.avatarUrl}
+                  showAvatar={item.showAvatar}
+                />
               )
             }
           />

@@ -18,8 +18,8 @@ const SUMMARY_INCLUDE = {
       images: { orderBy: { sortOrder: 'asc' }, take: 1, select: { url: true } },
     },
   },
-  tenant: { select: { id: true, fullName: true, phone: true, identityVerified: true } },
-  owner: { select: { id: true, fullName: true, phone: true, identityVerified: true } },
+  tenant: { select: { id: true, fullName: true, phone: true, identityVerified: true, avatarUrl: true } },
+  owner: { select: { id: true, fullName: true, phone: true, identityVerified: true, avatarUrl: true } },
   messages: { orderBy: { createdAt: 'desc' }, take: 1 },
 } satisfies Prisma.ConversationInclude;
 
@@ -43,7 +43,15 @@ export type ApiChat = {
   myRole: 'tenant' | 'owner';
   property: { id: string; title: string; areaLabel: string; monthlyRent: number; status: string; image: string | null };
   /** The other person. */
-  other: { id: string; name: string; phone: string; isVerified: boolean; role: 'tenant' | 'owner' };
+  other: {
+    id: string;
+    name: string;
+    phone: string;
+    isVerified: boolean;
+    /** Profile photo URL, or null (the app shows initials). */
+    avatarUrl: string | null;
+    role: 'tenant' | 'owner';
+  };
   lastMessage: { text: string; mine: boolean; createdAt: string; read: boolean } | null;
   unreadCount: number;
 };
@@ -210,6 +218,7 @@ export class ChatsService {
           name: other.fullName,
           phone: other.phone,
           isVerified: other.identityVerified,
+          avatarUrl: other.avatarUrl,
           role: role === 'tenant' ? 'owner' : 'tenant',
         },
         lastMessage: last

@@ -5,6 +5,8 @@ export type User = {
   phone: string;
   email: string;
   phoneVerified: boolean;
+  /** Profile photo ("/static/..." or https URL). null/missing = show initials. */
+  avatarUrl?: string | null;
 };
 
 export type OtpPurpose = 'register' | 'reset-password';

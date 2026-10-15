@@ -1,7 +1,7 @@
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Image, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { BrandHeader } from '@/components/brand/BrandHeader';
@@ -9,6 +9,7 @@ import { AppText } from '@/components/ui';
 import { initials } from '@/features/property/OwnerAvatar';
 import { comingSoon, confirmLogout, openSupport } from '@/features/profile/accountActions';
 import { ProfileMenuItem } from '@/features/profile/ProfileMenuItem';
+import { apiImage } from '@/services/apiClient';
 import { locationService } from '@/services/locationService';
 import { onboardingStorage } from '@/services/onboardingStorage';
 import { session } from '@/services/session';
@@ -52,11 +53,15 @@ export default function ProfileScreen() {
 
         <View style={styles.card}>
           <View>
-            <View style={styles.avatar}>
-              <AppText style={styles.initials}>{user ? initials(user.fullName) : ''}</AppText>
-            </View>
+            {user?.avatarUrl ? (
+              <Image source={apiImage(user.avatarUrl)} style={styles.avatar} accessibilityLabel="Your profile photo" />
+            ) : (
+              <View style={styles.avatar}>
+                <AppText style={styles.initials}>{user ? initials(user.fullName) : ''}</AppText>
+              </View>
+            )}
             <Pressable
-              onPress={() => comingSoon('Profile photo')}
+              onPress={() => router.push('/edit-profile')}
               style={styles.camera}
               hitSlop={6}
               accessibilityRole="button"
@@ -103,7 +108,7 @@ export default function ProfileScreen() {
         </View>
 
         <View style={styles.menu}>
-          <ProfileMenuItem icon="account" label="Edit Profile" onPress={() => comingSoon('Edit profile')} />
+          <ProfileMenuItem icon="account" label="Edit Profile" onPress={() => router.push('/edit-profile')} />
           <ProfileMenuItem
             icon="shield-check"
             label="Identity Verification"

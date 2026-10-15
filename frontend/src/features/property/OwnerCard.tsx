@@ -15,7 +15,7 @@ export function OwnerCard({ owner, onPress }: { owner: PropertyOwner; onPress: (
       accessibilityRole="button"
       accessibilityLabel={`Owner ${owner.name}${owner.isVerified ? ', verified' : ''}`}
     >
-      <OwnerAvatar name={owner.name} verified={owner.isVerified} />
+      <OwnerAvatar name={owner.name} verified={owner.isVerified} photo={owner.avatarUrl} />
 
       <View style={styles.info}>
         {owner.isVerified ? (

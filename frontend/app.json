@@ -29,7 +29,6 @@
       "expo-status-bar",
       [
         "expo-location",
-        
         {
           "locationWhenInUsePermission": "Basa Lagbe uses your location to show rental properties near you."
         }
@@ -40,6 +39,13 @@
           "android": {
             "usesCleartextTraffic": true
           }
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Basa Lagbe needs access to your photos to add pictures of your property and your profile.",
+          "cameraPermission": "Basa Lagbe uses the camera to take your profile photo."
         }
       ]
     ],

@@ -3,6 +3,7 @@ import { Image, Pressable, StyleSheet, View } from 'react-native';
 
 import { AppText } from '@/components/ui';
 import { initials } from '@/features/property/OwnerAvatar';
+import { apiImage } from '@/services/apiClient';
 import { colors, radius, spacing } from '@/theme';
 import type { ChatSummary } from '@/types/chat';
 import { formatListTime } from './chatFormat';
@@ -33,9 +34,13 @@ export function ChatListItem({ chat, onPress }: { chat: ChatSummary; onPress: ()
             <Ionicons name="home-outline" size={26} color={colors.primary} />
           </View>
         )}
-        <View style={[styles.avatar, { backgroundColor: role.avatar }]}>
-          <AppText style={styles.avatarText}>{initials(chat.other.name)}</AppText>
-        </View>
+        {chat.other.avatarUrl ? (
+          <Image source={apiImage(chat.other.avatarUrl)} style={[styles.avatar, styles.avatarPhoto]} />
+        ) : (
+          <View style={[styles.avatar, { backgroundColor: role.avatar }]}>
+            <AppText style={styles.avatarText}>{initials(chat.other.name)}</AppText>
+          </View>
+        )}
       </View>
 
       <View style={styles.middle}>
@@ -115,6 +120,7 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: colors.backgroundMint,
   },
+  avatarPhoto: { backgroundColor: colors.surface },
   avatarText: { fontSize: 10, fontWeight: '800', color: colors.white },
   middle: { flex: 1, minWidth: 0, gap: 1 },
   nameRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },

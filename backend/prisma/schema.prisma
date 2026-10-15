@@ -29,6 +29,8 @@ model User {
   phoneVerified    Boolean    @default(false) @map("phone_verified")
   /// NID checked by our team (shows the "Verified Owner" badge)
   identityVerified Boolean    @default(false) @map("identity_verified")
+  /// Profile photo: path under /static or a full https URL
+  avatarUrl        String?    @map("avatar_url")
   role             UserRole   @default(USER)
   createdAt        DateTime   @default(now()) @map("created_at")
   updatedAt        DateTime   @updatedAt @map("updated_at")

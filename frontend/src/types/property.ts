@@ -15,6 +15,7 @@ export type Facing =
   | 'north-west'
   | 'south-east'
   | 'south-west';
+
 export type Amenity =
   | 'wifi'
   | 'parking'
@@ -32,6 +33,8 @@ export type PropertyOwner = {
   name: string;
   phone: string;
   isVerified: boolean;
+  /** Profile photo ("/static/..." or https URL). Missing = show initials. */
+  avatarUrl?: string;
   /** "YYYY-MM" the owner joined. */
   memberSince: string;
   /** e.g. "within a few hours" — calculated by the backend later. */
@@ -57,7 +60,7 @@ export type Property = {
   advanceMonths: number;
   /** Monthly service charge in BDT (0 = included / none). */
   serviceCharge: number;
-    /** Refundable security deposit, in months of rent (0 = none). */
+  /** Refundable security deposit, in months of rent (0 = none). */
   securityDepositMonths: number;
   /** Whether electricity/gas/water bills are paid separately by the tenant. */
   utilityCost: 'included' | 'separate';
@@ -68,7 +71,7 @@ export type Property = {
   sizeSqft: number;
   floorNumber: number;
   totalFloors: number;
-    /** Which way the main side / balcony faces. */
+  /** Which way the main side / balcony faces. */
   facing?: Facing;
   description: string;
   tenantTypes: TenantType[];
@@ -77,7 +80,7 @@ export type Property = {
   /** ISO date (YYYY-MM-DD) the property can be moved into. */
   availableFrom: string;
   images: ImageSourcePropType[];
-    /** Optional property tour (uploaded video or YouTube link). */
+  /** Optional property tour (uploaded video or YouTube link). */
   videoUrl?: string;
   isVerified: boolean;
   owner: PropertyOwner;

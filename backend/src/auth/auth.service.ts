@@ -1,3 +1,6 @@
+import { unlink } from 'node:fs/promises';
+import { join } from 'node:path';
+
 import {
   ConflictException,
   ForbiddenException,
@@ -11,14 +14,21 @@ import bcrypt from 'bcryptjs';
 import { normalizeBdPhone } from '../common/phone.js';
 import { OtpPurpose, type User } from '../generated/prisma/client.js';
 import { PrismaService } from '../prisma/prisma.service.js';
-import type { LoginDto, OtpPurposeInput, RegisterDto, ResetPasswordDto } from './auth.dto.js';
+import {
+  UPLOADED_AVATAR,
+  type LoginDto,
+  type OtpPurposeInput,
+  type RegisterDto,
+  type ResetPasswordDto,
+  type UpdateProfileDto,
+} from './auth.dto.js';
 import { OtpService } from './otp.service.js';
 
 const BCRYPT_ROUNDS = 10;
 const RESET_TOKEN_TTL = '10m';
 
 /** What the app sees — never includes the password hash. Same shape as the app's `User` type. */
-export type PublicUser = Pick<User, 'id' | 'fullName' | 'phone' | 'email' | 'phoneVerified'>;
+export type PublicUser = Pick<User, 'id' | 'fullName' | 'phone' | 'email' | 'phoneVerified' | 'avatarUrl'>;
 
 export type AuthResult = { accessToken: string; user: PublicUser };
 
@@ -26,7 +36,20 @@ const toPurpose = (p: OtpPurposeInput) =>
   p === 'register' ? OtpPurpose.REGISTER : OtpPurpose.RESET_PASSWORD;
 
 export function toPublicUser(u: User): PublicUser {
-  return { id: u.id, fullName: u.fullName, phone: u.phone, email: u.email, phoneVerified: u.phoneVerified };
+  return {
+    id: u.id,
+    fullName: u.fullName,
+    phone: u.phone,
+    email: u.email,
+    phoneVerified: u.phoneVerified,
+    avatarUrl: u.avatarUrl,
+  };
+}
+
+/** Deletes a photo we stored ourselves (best effort — a missing file is fine). */
+async function removeAvatarFile(url: string) {
+  if (!UPLOADED_AVATAR.test(url)) return;
+  await unlink(join(process.cwd(), 'public', url.replace('/static/', ''))).catch(() => undefined);
 }
 
 @Injectable()
@@ -138,6 +161,31 @@ export class AuthService {
     const user = await this.prisma.user.findUnique({ where: { id: userId } });
     if (!user) throw new UnauthorizedException('Account not found.');
     return toPublicUser(user);
+  }
+
+  /** Edit Profile: name, email and photo. */
+  async updateMe(userId: string, dto: UpdateProfileDto): Promise<PublicUser> {
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (!user) throw new UnauthorizedException('Account not found.');
+
+    if (dto.email !== user.email) {
+      const taken = await this.prisma.user.findUnique({ where: { email: dto.email } });
+      if (taken) throw new ConflictException('This email is already used by another account.');
+    }
+
+    const updated = await this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        fullName: dto.fullName,
+        email: dto.email,
+        // undefined = keep the current photo, null = remove it
+        ...(dto.avatarUrl !== undefined ? { avatarUrl: dto.avatarUrl } : {}),
+      },
+    });
+
+    // The old photo is no longer used anywhere: delete the file.
+    if (user.avatarUrl && user.avatarUrl !== updated.avatarUrl) await removeAvatarFile(user.avatarUrl);
+    return toPublicUser(updated);
   }
 
   private findByIdentifier(identifier: string) {

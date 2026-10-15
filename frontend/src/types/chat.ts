@@ -30,7 +30,15 @@ export type ChatSummary = {
     image: ImageSourcePropType | null;
   };
   /** The other person. */
-  other: { id: string; name: string; phone: string; isVerified: boolean; role: ChatRole };
+  other: {
+    id: string;
+    name: string;
+    phone: string;
+    isVerified: boolean;
+    /** Profile photo ("/static/..." or https URL), or null for initials. */
+    avatarUrl: string | null;
+    role: ChatRole;
+  };
   lastMessage: { text: string; mine: boolean; createdAt: string; read: boolean } | null;
   unreadCount: number;
 };

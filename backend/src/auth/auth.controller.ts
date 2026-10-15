@@ -1,4 +1,4 @@
-import { Body, Controller, Get, HttpCode, HttpStatus, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, HttpStatus, Patch, Post, UseGuards } from '@nestjs/common';
 
 import {
   ForgotPasswordDto,
@@ -6,6 +6,7 @@ import {
   RegisterDto,
   ResendOtpDto,
   ResetPasswordDto,
+  UpdateProfileDto,
   VerifyOtpDto,
 } from './auth.dto.js';
 import { AuthService } from './auth.service.js';
@@ -61,5 +62,12 @@ export class AuthController {
   @UseGuards(JwtAuthGuard)
   me(@CurrentUser() user: JwtPayload) {
     return this.auth.getMe(user.sub);
+  }
+
+  /** PATCH /auth/me { fullName, email, avatarUrl? } — Edit Profile */
+  @Patch('me')
+  @UseGuards(JwtAuthGuard)
+  updateMe(@CurrentUser() user: JwtPayload, @Body() dto: UpdateProfileDto) {
+    return this.auth.updateMe(user.sub, dto);
   }
 }

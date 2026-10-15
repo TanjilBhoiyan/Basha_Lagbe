@@ -4,7 +4,7 @@ import type { Prisma } from '../generated/prisma/client.js';
 /** Everything we load for a property card or details page. */
 export const PROPERTY_INCLUDE = {
   images: { orderBy: { sortOrder: 'asc' } },
-  owner: { select: { fullName: true, phone: true, identityVerified: true, createdAt: true } },
+  owner: { select: { fullName: true, phone: true, identityVerified: true, avatarUrl: true, createdAt: true } },
 } satisfies Prisma.PropertyInclude;
 
 export type PropertyWithRelations = Prisma.PropertyGetPayload<{ include: typeof PROPERTY_INCLUDE }>;
@@ -46,6 +46,7 @@ export function toApiProperty(p: PropertyWithRelations) {
       name: p.owner.fullName,
       phone: p.owner.phone,
       isVerified: p.owner.identityVerified,
+      avatarUrl: p.owner.avatarUrl ?? undefined,
       memberSince: joined.slice(0, 7),
     },
     createdAt: p.createdAt.toISOString(),

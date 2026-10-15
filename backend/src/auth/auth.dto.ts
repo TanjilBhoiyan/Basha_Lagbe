@@ -1,5 +1,15 @@
 import { Transform } from 'class-transformer';
-import { IsEmail, IsIn, IsNotEmpty, IsString, Length, Matches, MaxLength, MinLength } from 'class-validator';
+import {
+  IsEmail,
+  IsIn,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  Length,
+  Matches,
+  MaxLength,
+  MinLength,
+} from 'class-validator';
 
 import { BD_PHONE_REGEX, normalizeBdPhone } from '../common/phone.js';
 
@@ -89,4 +99,25 @@ export class ResetPasswordDto {
   @IsString()
   @Matches(STRONG_PASSWORD, { message: PASSWORD_MESSAGE })
   newPassword: string;
+}
+
+/** Photos uploaded through POST /uploads/avatar. */
+export const UPLOADED_AVATAR = /^\/static\/uploads\/avatars\/[0-9a-f-]{36}\.(jpg|png|webp)$/;
+
+/** PATCH /auth/me — Edit Profile. The phone number can't be changed (it is the login ID). */
+export class UpdateProfileDto {
+  @Transform(trim)
+  @IsString()
+  @MinLength(3, { message: 'Name must be at least 3 characters' })
+  @MaxLength(60)
+  fullName: string;
+
+  @Transform(toEmail)
+  @IsEmail({}, { message: 'Enter a valid email address' })
+  email: string;
+
+  /** New photo URL from /uploads/avatar, null to remove the photo, or leave out to keep it. */
+  @IsOptional()
+  @Matches(UPLOADED_AVATAR, { message: 'Please upload the photo again.' })
+  avatarUrl?: string | null;
 }
