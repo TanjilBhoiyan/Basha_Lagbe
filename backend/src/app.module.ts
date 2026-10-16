@@ -9,6 +9,7 @@ import { FavoritesModule } from './favorites/favorites.module.js';
 import { GeocodeModule } from './geocode/geocode.module.js';
 import { HealthModule } from './health/health.module.js';
 import { LocationsModule } from './locations/locations.module.js';
+import { PlacesModule } from './places/places.module.js';
 import { PrismaModule } from './prisma/prisma.module.js';
 import { PropertiesModule } from './properties/properties.module.js';
 import { SmsModule } from './sms/sms.module.js';
@@ -30,6 +31,7 @@ import { VisitsModule } from './visits/visits.module.js';
     UploadsModule,
     ChatsModule,
     GeocodeModule,
+    PlacesModule,
   ],
   controllers: [AppController],
   providers: [AppService],

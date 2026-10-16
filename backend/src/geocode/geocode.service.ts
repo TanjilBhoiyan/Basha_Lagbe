@@ -2,15 +2,17 @@ import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 
 import type { GeocodeProvider, PlaceName } from './geocode.provider.js';
+import { GeoapifyProvider } from './providers/geoapify.provider.js';
+import { GoogleProvider } from './providers/google.provider.js';
 import { NominatimProvider } from './providers/nominatim.provider.js';
-import { OverpassProvider } from './providers/overpass.provider.js';
 
 /**
- * All place-name services we can use. GEOCODE_PROVIDER in .env picks one (default "overpass").
- * New service (e.g. Google, LocationIQ): make a file in ./providers, then add one line below.
+ * All place-name services we can use. GEOCODE_PROVIDER in .env picks one (default "geoapify").
+ * New service (e.g. LocationIQ): make a file in ./providers, then add one line below.
  */
 const PROVIDERS: Record<string, new (config: ConfigService) => GeocodeProvider> = {
-  overpass: OverpassProvider, // nearest area name (Mohakhali), Nominatim as backup
+  geoapify: GeoapifyProvider, // nearest area name (Mohakhali, Banani), Nominatim as backup
+  google: GoogleProvider, // Google Geocoding (needs billing on the Google Cloud project)
   nominatim: NominatimProvider,
 };
 
@@ -26,7 +28,7 @@ export class GeocodeService {
   private readonly cache = new Map<string, PlaceName | null>();
 
   constructor(config: ConfigService) {
-    const name = config.get<string>('GEOCODE_PROVIDER') || 'overpass';
+    const name = config.get<string>('GEOCODE_PROVIDER') || 'geoapify';
     const Provider = PROVIDERS[name];
     if (!Provider) {
       throw new Error(`Unknown GEOCODE_PROVIDER "${name}". Use one of: ${Object.keys(PROVIDERS).join(', ')}`);

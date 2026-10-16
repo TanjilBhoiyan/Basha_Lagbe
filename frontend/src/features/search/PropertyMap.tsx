@@ -1,22 +1,37 @@
-import * as ExpoLocation from 'expo-location';
-import { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Alert, Linking, Pressable, StyleSheet, View } from 'react-native';
-import MapView, { Marker } from 'react-native-maps';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import * as ExpoLocation from 'expo-location';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { ActivityIndicator, Alert, Linking, Pressable, StyleSheet, View } from 'react-native';
 
-import { AppText } from '@/components/ui';
-import { colors, radius, spacing } from '@/theme';
+import { AppMap } from '@/features/map/AppMap';
+import { spanToZoom, type AppMapHandle, type LatLng } from '@/features/map/mapTypes';
+import { colors, spacing } from '@/theme';
 import { shortPrice, type PropertyMapProps } from './mapTypes';
 
+/** Search > Map: a price bubble per listing, tap to select; "my location" button. */
 export function PropertyMap({ properties, selectedId, onSelect, region }: PropertyMapProps) {
-  const mapRef = useRef<MapView>(null);
-  const [showUser, setShowUser] = useState(false);
+  const mapRef = useRef<AppMapHandle>(null);
+  const [me, setMe] = useState<LatLng | null>(null);
   const [locating, setLocating] = useState(false);
+  const firstRegion = useRef(region);
 
   // Move the map when the selected area changes.
   useEffect(() => {
-    mapRef.current?.animateToRegion(region, 500);
+    if (region === firstRegion.current) return;
+    mapRef.current?.flyTo(region, spanToZoom(region.longitudeDelta));
   }, [region]);
+
+  const markers = useMemo(
+    () =>
+      properties.map((p) => ({
+        id: p.id,
+        latitude: p.latitude,
+        longitude: p.longitude,
+        label: shortPrice(p.monthlyRent),
+        selected: p.id === selectedId,
+      })),
+    [properties, selectedId],
+  );
 
   const goToMyLocation = async () => {
     setLocating(true);
@@ -35,19 +50,10 @@ export function PropertyMap({ properties, selectedId, onSelect, region }: Proper
         );
         return;
       }
-      setShowUser(true);
-      const pos = await ExpoLocation.getCurrentPositionAsync({
-        accuracy: ExpoLocation.Accuracy.Balanced,
-      });
-      mapRef.current?.animateToRegion(
-        {
-          latitude: pos.coords.latitude,
-          longitude: pos.coords.longitude,
-          latitudeDelta: 0.04,
-          longitudeDelta: 0.04,
-        },
-        500,
-      );
+      const pos = await ExpoLocation.getCurrentPositionAsync({ accuracy: ExpoLocation.Accuracy.Balanced });
+      const here = { latitude: pos.coords.latitude, longitude: pos.coords.longitude };
+      setMe(here);
+      mapRef.current?.flyTo(here, 15);
     } catch {
       Alert.alert('Location unavailable', 'Could not get your location. Please try again.');
     } finally {
@@ -57,36 +63,14 @@ export function PropertyMap({ properties, selectedId, onSelect, region }: Proper
 
   return (
     <View style={styles.container}>
-      <MapView
+      <AppMap
         ref={mapRef}
-        style={StyleSheet.absoluteFill}
-        initialRegion={region}
-        showsUserLocation={showUser}
-        showsMyLocationButton={false}
-        toolbarEnabled={false}
-      >
-        {properties.map((p) => {
-          const selected = p.id === selectedId;
-          return (
-            <Marker
-              key={`${p.id}-${selected ? 1 : 0}`}
-              coordinate={{ latitude: p.latitude, longitude: p.longitude }}
-              onPress={() => onSelect(p.id)}
-              anchor={{ x: 0.5, y: 1 }}
-              zIndex={selected ? 2 : 1}
-            >
-              <View style={styles.pin}>
-                <View style={[styles.bubble, selected && styles.bubbleSelected]}>
-                  <AppText style={[styles.price, selected && styles.priceSelected]}>
-                    {shortPrice(p.monthlyRent)}
-                  </AppText>
-                </View>
-                <View style={[styles.dot, selected && styles.dotSelected]} />
-              </View>
-            </Marker>
-          );
-        })}
-      </MapView>
+        initialCenter={firstRegion.current}
+        initialZoom={spanToZoom(firstRegion.current.longitudeDelta)}
+        markers={markers}
+        onMarkerPress={onSelect}
+        userLocation={me}
+      />
 
       <Pressable
         onPress={goToMyLocation}
@@ -106,28 +90,6 @@ export function PropertyMap({ properties, selectedId, onSelect, region }: Proper
 
 const styles = StyleSheet.create({
   container: { flex: 1, overflow: 'hidden' },
-  pin: { alignItems: 'center' },
-  bubble: {
-    paddingHorizontal: spacing.sm + 2,
-    paddingVertical: 5,
-    borderRadius: radius.md,
-    backgroundColor: colors.primaryDeep,
-    borderWidth: 2,
-    borderColor: colors.white,
-  },
-  bubbleSelected: { backgroundColor: colors.white, borderColor: colors.primaryDeep },
-  price: { color: colors.white, fontWeight: '800', fontSize: 13 },
-  priceSelected: { color: colors.primaryDeep },
-  dot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    marginTop: 2,
-    backgroundColor: colors.primaryDeep,
-    borderWidth: 2,
-    borderColor: colors.white,
-  },
-  dotSelected: { backgroundColor: colors.primary },
   locate: {
     position: 'absolute',
     right: spacing.lg,
