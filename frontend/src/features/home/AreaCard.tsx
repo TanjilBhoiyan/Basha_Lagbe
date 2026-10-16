@@ -1,4 +1,5 @@
-import { Image, Pressable, StyleSheet } from 'react-native';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { Image, Pressable, StyleSheet, View } from 'react-native';
 
 import { AppText } from '@/components/ui';
 import { colors, radius, spacing } from '@/theme';
@@ -18,7 +19,14 @@ export function AreaCard({ location, onPress }: Props) {
       accessibilityRole="button"
       accessibilityLabel={`${location.name}, ${location.listingCount} listings`}
     >
-      {location.image ? <Image source={location.image} style={styles.image} /> : null}
+      {location.image ? (
+        <Image source={location.image} style={styles.image} />
+      ) : (
+        // New areas (made from owners' pins) have no photo yet.
+        <View style={[styles.image, styles.noImage]}>
+          <MaterialCommunityIcons name="map-marker-radius" size={34} color={colors.primary} />
+        </View>
+      )}
       <AppText variant="bodyBold" numberOfLines={1} style={styles.name}>
         {location.name}
       </AppText>
@@ -40,6 +48,7 @@ const styles = StyleSheet.create({
   },
   pressed: { opacity: 0.85 },
   image: { width: '100%', height: 88 },
+  noImage: { alignItems: 'center', justifyContent: 'center', backgroundColor: colors.primaryLight },
   name: { paddingHorizontal: spacing.sm, paddingTop: spacing.sm },
   count: { paddingHorizontal: spacing.sm, paddingBottom: spacing.sm },
 });

@@ -35,11 +35,6 @@ export const locationService = {
     return fetchLocations('');
   },
 
-  /** Every area (for the Add Property area picker). */
-  async getAll(): Promise<Location[]> {
-    return fetchLocations('?all=true');
-  },
-
   async getRecent(): Promise<Location[]> {
     const ids = await readIds(RECENT_KEY);
     return ids.length ? fetchLocations(`?ids=${ids.map(encodeURIComponent).join(',')}`) : [];

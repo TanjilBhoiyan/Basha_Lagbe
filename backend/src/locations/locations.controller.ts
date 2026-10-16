@@ -10,11 +10,9 @@ export class LocationsController {
    * GET /locations?popular=true   -> popular areas
    * GET /locations?q=mir          -> search by area/city
    * GET /locations?ids=a,b        -> specific areas (e.g. "recent" list)
-   * GET /locations?all=true       -> every area (Add Property picker)
    */
   @Get()
-  list(@Query('q') q?: string, @Query('ids') ids?: string, @Query('all') all?: string) {
-    if (all === 'true') return this.locations.all();
+  list(@Query('q') q?: string, @Query('ids') ids?: string) {
     if (ids) return this.locations.findByIds(ids.split(',').filter(Boolean).slice(0, 20));
     if (q) return this.locations.search(q);
     return this.locations.popular();

@@ -20,20 +20,12 @@ const prisma = new PrismaClient({
 const OWNER_PASSWORD = 'Owner@1234';
 
 const LOCATIONS: Prisma.LocationCreateInput[] = [
-  { id: 'dhaka-mirpur', name: 'Mirpur', city: 'Dhaka', latitude: 23.8223, longitude: 90.3654, imageUrl: '/static/locations/mirpur.jpg', popularRank: 1 },
-  { id: 'dhaka-uttara', name: 'Uttara', city: 'Dhaka', latitude: 23.8759, longitude: 90.3795, imageUrl: '/static/locations/uttara.jpg', popularRank: 2 },
-  { id: 'dhaka-dhanmondi', name: 'Dhanmondi', city: 'Dhaka', latitude: 23.7461, longitude: 90.3742, imageUrl: '/static/locations/dhanmondi.jpg', popularRank: 3 },
-  { id: 'dhaka-bashundhara', name: 'Bashundhara', city: 'Dhaka', latitude: 23.8193, longitude: 90.4526, imageUrl: '/static/locations/bashundhara.jpg', popularRank: 4 },
-  { id: 'chattogram', name: 'Chattogram', city: 'Chattogram', latitude: 22.3569, longitude: 91.7832, imageUrl: '/static/locations/chattogram.jpg', popularRank: 5 },
-  { id: 'sylhet', name: 'Sylhet', city: 'Sylhet', latitude: 24.8949, longitude: 91.8687, imageUrl: '/static/locations/sylhet.jpg', popularRank: 6 },
-  { id: 'dhaka-mohammadpur', name: 'Mohammadpur', city: 'Dhaka', latitude: 23.7662, longitude: 90.3589 },
-  { id: 'dhaka-badda', name: 'Badda', city: 'Dhaka', latitude: 23.7808, longitude: 90.4267 },
-  { id: 'dhaka-banani', name: 'Banani', city: 'Dhaka', latitude: 23.7937, longitude: 90.4066 },
+  { id: 'dhaka-mirpur', name: 'Mirpur', city: 'Dhaka', latitude: 23.8223, longitude: 90.3654, imageUrl: '/static/locations/mirpur.jpg' },
+  { id: 'dhaka-uttara', name: 'Uttara', city: 'Dhaka', latitude: 23.8759, longitude: 90.3795, imageUrl: '/static/locations/uttara.jpg' },
+  { id: 'dhaka-dhanmondi', name: 'Dhanmondi', city: 'Dhaka', latitude: 23.7461, longitude: 90.3742, imageUrl: '/static/locations/dhanmondi.jpg' },
+  { id: 'dhaka-bashundhara', name: 'Bashundhara', city: 'Dhaka', latitude: 23.8193, longitude: 90.4526, imageUrl: '/static/locations/bashundhara.jpg' },
   { id: 'dhaka-gulshan', name: 'Gulshan', city: 'Dhaka', latitude: 23.7925, longitude: 90.4078 },
-  { id: 'dhaka-rampura', name: 'Rampura', city: 'Dhaka', latitude: 23.7613, longitude: 90.421 },
-  { id: 'dhaka-motijheel', name: 'Motijheel', city: 'Dhaka', latitude: 23.733, longitude: 90.4172 },
-  { id: 'rajshahi', name: 'Rajshahi', city: 'Rajshahi', latitude: 24.3745, longitude: 88.6042 },
-  { id: 'khulna', name: 'Khulna', city: 'Khulna', latitude: 22.8456, longitude: 89.5403 },
+  { id: 'chattogram', name: 'Chattogram', city: 'Chattogram', latitude: 22.3569, longitude: 91.7832, imageUrl: '/static/locations/chattogram.jpg' },
 ];
 
 /** Fixed ids so running the seed twice updates instead of duplicating. */

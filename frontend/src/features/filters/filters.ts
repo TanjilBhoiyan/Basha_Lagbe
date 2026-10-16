@@ -1,7 +1,7 @@
 import type { MaterialCommunityIcons } from '@expo/vector-icons';
 import type { ComponentProps } from 'react';
 
-import type { Amenity, Furnishing, Property, PropertyType, TenantType } from '@/types/property';
+import type { Amenity, Furnishing, PropertyType, TenantType } from '@/types/property';
 
 type IconName = ComponentProps<typeof MaterialCommunityIcons>['name'];
 
@@ -38,24 +38,6 @@ export const DEFAULT_FILTERS: PropertyFilters = {
 export const PRICE_STEPS = [0, 5000, 10000, 15000, 20000, 25000, 30000, 40000, 50000, 75000, 100000];
 export const PRICE_LABEL_STEPS = [0, 10000, 20000, 50000, 100000];
 
-function countMatches(value: number, wanted: number | null) {
-  if (wanted === null) return true;
-  return wanted >= 4 ? value >= 4 : value === wanted;
-}
-
-export function matchesFilters(p: Property, f: PropertyFilters): boolean {
-  if (p.monthlyRent < f.minRent) return false;
-  if (f.maxRent !== null && p.monthlyRent > f.maxRent) return false;
-  if (f.type && p.type !== f.type) return false;
-  if (f.tenantType && !p.tenantTypes.includes(f.tenantType)) return false;
-  if (!countMatches(p.bedrooms, f.bedrooms)) return false;
-  if (!countMatches(p.bathrooms, f.bathrooms)) return false;
-  if (f.furnishing && p.furnishing !== f.furnishing) return false;
-  if (!f.amenities.every((a) => p.amenities.includes(a))) return false;
-  if (f.availableBy && p.availableFrom > f.availableBy) return false;
-  return true;
-}
-
 /** How many filters differ from the defaults (shown as a badge). */
 export function activeFilterCount(f: PropertyFilters): number {
   let n = 0;
@@ -83,7 +65,6 @@ export const FURNISHING_OPTIONS: { value: Furnishing; label: string; icon: IconN
   { value: 'unfurnished', label: 'Unfurnished', icon: 'cube-outline' },
 ];
 
-
 // TODO: load amenities from the backend (admin can add new ones).
 export const AMENITY_OPTIONS: { value: Amenity; label: string; icon: IconName }[] = [
   { value: 'wifi', label: 'WiFi', icon: 'wifi' },
@@ -98,6 +79,7 @@ export const AMENITY_OPTIONS: { value: Amenity; label: string; icon: IconName }[
   { value: 'balcony', label: 'Balcony', icon: 'balcony' },
   { value: 'fire-safety', label: 'Fire Safety', icon: 'fire-extinguisher' },
 ];
+
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
 function toIso(d: Date) {
