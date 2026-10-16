@@ -3,7 +3,7 @@ import { Image, Pressable, StyleSheet, View } from 'react-native';
 
 import { AppText } from '@/components/ui';
 import { colors, radius, spacing } from '@/theme';
-import { locationLabel, type Location } from '@/types/location';
+import { locationLabel, NEAR_RADIUS_KM, type Location } from '@/types/location';
 import { formatBdNumber } from '@/utils/format';
 
 type Props = {
@@ -13,15 +13,23 @@ type Props = {
 };
 
 export function LocationRow({ location, selected, onPress }: Props) {
+  const subtitle = location.isPin
+    ? `Pinned on map · within ${NEAR_RADIUS_KM} km`
+    : `${formatBdNumber(location.listingCount)} ${location.listingCount === 1 ? 'listing' : 'listings'}`;
+
   return (
     <Pressable
       onPress={onPress}
       style={({ pressed }) => [styles.card, selected && styles.selected, pressed && styles.pressed]}
       accessibilityRole="radio"
       accessibilityState={{ selected }}
-      accessibilityLabel={`${locationLabel(location)}, ${location.listingCount} listings`}
+      accessibilityLabel={`${locationLabel(location)}, ${subtitle}`}
     >
-      {location.image ? (
+      {location.isPin ? (
+        <View style={[styles.image, styles.imagePlaceholder]}>
+          <Ionicons name="map-outline" size={26} color={colors.primary} />
+        </View>
+      ) : location.image ? (
         <Image source={location.image} style={styles.image} />
       ) : (
         <View style={[styles.image, styles.imagePlaceholder]}>
@@ -36,7 +44,7 @@ export function LocationRow({ location, selected, onPress }: Props) {
           {locationLabel(location)}
         </AppText>
         <AppText variant="caption" color="textSecondary">
-          {formatBdNumber(location.listingCount)} listings
+          {subtitle}
         </AppText>
       </View>
 

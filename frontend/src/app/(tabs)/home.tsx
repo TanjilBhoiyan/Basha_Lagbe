@@ -29,7 +29,7 @@ import {
 import { locationService } from '@/services/locationService';
 import { propertyService } from '@/services/propertyService';
 import { colors, SCREEN_PADDING, spacing } from '@/theme';
-import { locationLabel, type Location } from '@/types/location';
+import { locationLabel, NEAR_RADIUS_KM, type Location } from '@/types/location';
 import type { Property } from '@/types/property';
 
 export default function HomeScreen() {
@@ -45,6 +45,8 @@ export default function HomeScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
+  // Re-read the selected location whenever Home comes back into focus
+  // (e.g. after changing it on the Select Location screen).
   // (Favorites are re-read too, so hearts tapped on Search show up here.)
   useFocusEffect(
     useCallback(() => {
@@ -56,10 +58,12 @@ export default function HomeScreen() {
   useEffect(() => {
     locationService.getPopular().then(setAreas);
   }, []);
+
   const loadProperties = useCallback(async () => {
-    const list = await propertyService.getRecommended({ locationId: location?.id, filters });
+    const list = await propertyService.getRecommended({ location, filters });
     setProperties(list);
-  }, [location?.id, filters]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location?.id, location?.latitude, location?.longitude, filters]);
 
   const openFullFilters = () => router.push('/filters');
   const filterCount = activeFilterCount(filters);
@@ -164,7 +168,10 @@ export default function HomeScreen() {
         </ScrollView>
 
         <View style={styles.padded}>
-          <SectionHeader title="Recommended for You" onSeeAll={() => router.push('/search')} />
+          <SectionHeader
+            title={location?.isPin ? 'Homes Near You' : 'Recommended for You'}
+            onSeeAll={() => router.push('/search')}
+          />
         </View>
 
         {loading ? (
@@ -178,13 +185,23 @@ export default function HomeScreen() {
           </ScrollView>
         ) : properties.length === 0 ? (
           <View style={styles.padded}>
-            <EmptyState
-              icon="home-outline"
-              title="No properties found"
-              message="Try changing or clearing your filters."
-              actionLabel="Clear filters"
-              onAction={resetFilters}
-            />
+            {location?.isPin && filterCount === 0 ? (
+              <EmptyState
+                icon="location-outline"
+                title="No homes nearby yet"
+                message={`No listings within ${NEAR_RADIUS_KM} km of your pin. Try another area.`}
+                actionLabel="Change location"
+                onAction={() => router.push('/select-location')}
+              />
+            ) : (
+              <EmptyState
+                icon="home-outline"
+                title="No properties found"
+                message="Try changing or clearing your filters."
+                actionLabel="Clear filters"
+                onAction={resetFilters}
+              />
+            )}
           </View>
         ) : (
           <ScrollView

@@ -84,4 +84,6 @@ export type Property = {
   videoUrl?: string;
   isVerified: boolean;
   owner: PropertyOwner;
+  /** Only in "near me" results: km from the pinned point. */
+  distanceKm?: number;
 };

@@ -6,6 +6,7 @@ import { AppService } from './app.service.js';
 import { AuthModule } from './auth/auth.module.js';
 import { ChatsModule } from './chats/chats.module.js';
 import { FavoritesModule } from './favorites/favorites.module.js';
+import { GeocodeModule } from './geocode/geocode.module.js';
 import { HealthModule } from './health/health.module.js';
 import { LocationsModule } from './locations/locations.module.js';
 import { PrismaModule } from './prisma/prisma.module.js';
@@ -28,6 +29,7 @@ import { VisitsModule } from './visits/visits.module.js';
     VisitsModule,
     UploadsModule,
     ChatsModule,
+    GeocodeModule,
   ],
   controllers: [AppController],
   providers: [AppService],

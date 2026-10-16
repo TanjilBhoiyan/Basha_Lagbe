@@ -1,4 +1,5 @@
 import { DEFAULT_FILTERS, type PropertyFilters } from '@/features/filters/filters';
+import { NEAR_RADIUS_KM, type Location } from '@/types/location';
 import type { Property } from '@/types/property';
 
 import { apiImage, apiRequest } from './apiClient';
@@ -16,7 +17,7 @@ function toQuery(params: {
   filters?: PropertyFilters;
   query?: string;
   sort?: PropertySort;
-  locationId?: string;
+  location?: Location | null;
   limit?: number;
 }): string {
   const f = params.filters ?? DEFAULT_FILTERS;
@@ -31,7 +32,14 @@ function toQuery(params: {
   if (f.furnishing) q.set('furnishing', f.furnishing);
   if (f.amenities.length) q.set('amenities', f.amenities.join(','));
   if (f.availableBy) q.set('availableBy', f.availableBy);
-  if (params.locationId) q.set('locationId', params.locationId);
+  // An area: its listings first. A map pin: listings within NEAR_RADIUS_KM, nearest first.
+  if (params.location?.isPin) {
+    q.set('lat', String(params.location.latitude));
+    q.set('lng', String(params.location.longitude));
+    q.set('radiusKm', String(NEAR_RADIUS_KM));
+  } else if (params.location) {
+    q.set('locationId', params.location.id);
+  }
   if (params.sort) q.set('sort', params.sort);
   if (params.limit) q.set('limit', String(params.limit));
   const text = q.toString();
@@ -45,8 +53,8 @@ function toQuery(params: {
 let favoriteCache: string[] | null = null;
 
 export const propertyService = {
-  /** Matching properties, with the selected location's listings first. */
-  async getRecommended(params: { locationId?: string; filters?: PropertyFilters }): Promise<Property[]> {
+  /** Matching properties: the selected area's listings first, or near a map pin (nearest first). */
+  async getRecommended(params: { location?: Location | null; filters?: PropertyFilters }): Promise<Property[]> {
     const result = await apiRequest<ApiPage>(`/properties${toQuery({ ...params, sort: 'recommended' })}`);
     return result.ok ? result.data.items.map(toProperty) : [];
   },
@@ -56,7 +64,7 @@ export const propertyService = {
     filters: PropertyFilters;
     query?: string;
     sort?: PropertySort;
-    locationId?: string;
+    location?: Location | null;
   }): Promise<Property[]> {
     const result = await apiRequest<ApiPage>(`/properties${toQuery({ ...params, limit: 50 })}`);
     return result.ok ? result.data.items.map(toProperty) : [];

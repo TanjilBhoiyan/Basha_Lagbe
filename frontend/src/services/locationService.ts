@@ -35,7 +35,7 @@ export const locationService = {
     return fetchLocations('');
   },
 
-    /** Every area (for the Add Property area picker). */
+  /** Every area (for the Add Property area picker). */
   async getAll(): Promise<Location[]> {
     return fetchLocations('?all=true');
   },
@@ -60,9 +60,13 @@ export const locationService = {
     }
   },
 
-  /** Saves the chosen location and moves it to the top of "Recent". */
+  /** Saves the chosen location and moves it to the top of "Recent" (map pins are not added there). */
   async select(location: Location): Promise<void> {
     try {
+      if (location.isPin) {
+        await AsyncStorage.setItem(SELECTED_KEY, JSON.stringify(location));
+        return;
+      }
       const recent = (await readIds(RECENT_KEY)).filter((id) => id !== location.id);
       await AsyncStorage.multiSet([
         [SELECTED_KEY, JSON.stringify(location)],

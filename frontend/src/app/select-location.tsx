@@ -1,6 +1,6 @@
-import { Ionicons } from '@expo/vector-icons';
-import { router } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { router, useFocusEffect } from 'expo-router';
+import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -14,7 +14,7 @@ import {
 } from '@/components/ui';
 import { LocationRow } from '@/features/location/LocationRow';
 import { locationService } from '@/services/locationService';
-import { colors, SCREEN_PADDING, spacing } from '@/theme';
+import { colors, radius, SCREEN_PADDING, spacing } from '@/theme';
 import type { Location } from '@/types/location';
 
 type Tab = 'recent' | 'popular';
@@ -46,6 +46,15 @@ export default function SelectLocationScreen() {
       setLoading(false);
     })();
   }, []);
+
+  // A pin saved on the map screen shows up here when the user comes back.
+  useFocusEffect(
+    useCallback(() => {
+      locationService.getSelected().then((current) => {
+        if (current?.isPin) setSelected(current);
+      });
+    }, []),
+  );
 
   // Search as the user types (small debounce).
   useEffect(() => {
@@ -111,6 +120,31 @@ export default function SelectLocationScreen() {
           onChangeText={setQuery}
           onFilterPress={() => {}}
         />
+
+        {!isSearching ? (
+          <Pressable
+            onPress={() => router.push('/pick-location')}
+            style={({ pressed }) => [styles.gps, pressed && styles.pressed]}
+            accessibilityRole="button"
+          >
+            <View style={styles.gpsIcon}>
+              <MaterialCommunityIcons name="crosshairs-gps" size={22} color={colors.primaryDeep} />
+            </View>
+            <View style={styles.flex}>
+              <AppText variant="bodyBold" color="primaryDeep">
+                Use my current location
+              </AppText>
+              <AppText variant="caption" color="textSecondary">
+                Pin your exact area on the map
+              </AppText>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color={colors.primaryDeep} />
+          </Pressable>
+        ) : null}
+
+        {!isSearching && selected?.isPin ? (
+          <LocationRow location={selected} selected onPress={() => router.push('/pick-location')} />
+        ) : null}
 
         {loading ? (
           <ActivityIndicator color={colors.primary} style={styles.loader} />
@@ -181,4 +215,25 @@ const styles = StyleSheet.create({
   list: { gap: spacing.md },
   section: { gap: spacing.md, marginTop: spacing.sm },
   footer: { paddingHorizontal: SCREEN_PADDING, paddingVertical: spacing.md },
+  flex: { flex: 1 },
+  pressed: { opacity: 0.85 },
+  gps: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    padding: spacing.md,
+    borderRadius: radius.lg,
+    borderWidth: 1.5,
+    borderColor: colors.primary,
+    borderStyle: 'dashed',
+    backgroundColor: colors.white,
+  },
+  gpsIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: colors.primaryLight,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
 });

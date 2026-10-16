@@ -7,6 +7,8 @@ import {
   IsDateString,
   IsIn,
   IsInt,
+  IsLatitude,
+  IsLongitude,
   IsOptional,
   IsString,
   Matches,
@@ -95,6 +97,24 @@ export class ListPropertiesQuery {
   @IsString()
   @MaxLength(60)
   locationId?: string;
+
+  /** "Near me": centre of the search (both lat and lng needed). Listings are then sorted by distance. */
+  @IsOptional()
+  @Type(() => Number)
+  @IsLatitude()
+  lat?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsLongitude()
+  lng?: number;
+
+  /** How far from lat/lng, in km (default 5). */
+  @IsOptional()
+  @Type(() => Number)
+  @Min(0.5)
+  @Max(50)
+  radiusKm?: number;
 
   @IsOptional()
   @IsIn(SORTS)

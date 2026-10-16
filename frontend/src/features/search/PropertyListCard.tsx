@@ -4,10 +4,12 @@ import { Image, Pressable, StyleSheet, View } from 'react-native';
 import { AppText } from '@/components/ui';
 import { colors, radius, spacing } from '@/theme';
 import type { Property } from '@/types/property';
+import { formatDistance } from '@/utils/distance';
 import { formatBdNumber, formatTaka, plural } from '@/utils/format';
 
 type Props = {
   property: Property;
+  /** Leave out to hide the heart (e.g. summary card on a sub-screen). */
   isFavorite?: boolean;
   onToggleFavorite?: () => void;
   onPress: () => void;
@@ -71,6 +73,7 @@ export function PropertyListCard({
           <Ionicons name="location" size={13} color={colors.primary} />
           <AppText variant="small" color="textSecondary" numberOfLines={1}>
             {property.areaLabel}
+            {property.distanceKm !== undefined ? ` · ${formatDistance(property.distanceKm)}` : ''}
           </AppText>
         </View>
 

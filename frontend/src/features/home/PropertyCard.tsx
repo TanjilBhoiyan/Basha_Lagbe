@@ -4,6 +4,7 @@ import { Image, Linking, Pressable, StyleSheet, View } from 'react-native';
 import { AppText } from '@/components/ui';
 import { colors, radius, spacing } from '@/theme';
 import type { Property } from '@/types/property';
+import { formatDistance } from '@/utils/distance';
 import { formatBdNumber, formatTaka, plural } from '@/utils/format';
 
 type Props = {
@@ -68,6 +69,7 @@ export function PropertyCard({ property, width, isFavorite, onToggleFavorite, on
           <Ionicons name="location" size={14} color={colors.primary} />
           <AppText variant="caption" color="textSecondary" numberOfLines={1}>
             {property.areaLabel}
+            {property.distanceKm !== undefined ? ` · ${formatDistance(property.distanceKm)}` : ''}
           </AppText>
         </View>
 
@@ -83,7 +85,7 @@ export function PropertyCard({ property, width, isFavorite, onToggleFavorite, on
           {property.bedrooms > 0 ? (
             <Spec icon="bed-outline" text={plural(property.bedrooms, 'Bed')} />
           ) : null}
-           <Spec icon="water-outline" text={plural(property.bathrooms, 'Bath')} />
+          <Spec icon="water-outline" text={plural(property.bathrooms, 'Bath')} />
           <Spec icon="resize-outline" text={`${formatBdNumber(property.sizeSqft)} sqft`} />
         </View>
 

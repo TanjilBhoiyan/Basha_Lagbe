@@ -62,7 +62,7 @@ export default function SearchScreen() {
         filters,
         query,
         sort,
-        locationId: location?.id,
+        location,
       });
       setResults(list);
       setSelectedId((current) =>
@@ -71,12 +71,13 @@ export default function SearchScreen() {
       setLoading(false);
     }, 300);
     return () => clearTimeout(timer);
-  }, [filters, query, sort, location?.id]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filters, query, sort, location?.id, location?.latitude, location?.longitude]);
 
   const region = useMemo<MapRegion>(() => {
     if (!location) return DEFAULT_REGION;
-    const isCity = location.name === location.city;
-    const delta = isCity ? 0.15 : 0.07;
+    const isCity = !location.isPin && location.name === location.city;
+    const delta = isCity ? 0.15 : location.isPin ? 0.05 : 0.07;
     return {
       latitude: location.latitude,
       longitude: location.longitude,

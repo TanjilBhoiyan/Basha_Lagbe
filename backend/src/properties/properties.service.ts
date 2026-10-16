@@ -13,6 +13,21 @@ import {
 import { PROPERTY_INCLUDE, toApiProperty, toOwnerProperty, type ApiProperty, type OwnerProperty } from './property.mapper.js';
 
 const DEFAULT_LIMIT = 20;
+const DEFAULT_RADIUS_KM = 5;
+/** Safety cap for the "near me" search (candidates inside the box, before the exact distance check). */
+const MAX_NEAR_CANDIDATES = 1000;
+
+/** Straight-line distance in km between two points (Haversine). */
+function distanceKm(lat1: number, lng1: number, lat2: number, lng2: number): number {
+  const rad = Math.PI / 180;
+  const dLat = (lat2 - lat1) * rad;
+  const dLng = (lng2 - lng1) * rad;
+  const a = Math.sin(dLat / 2) ** 2 + Math.cos(lat1 * rad) * Math.cos(lat2 * rad) * Math.sin(dLng / 2) ** 2;
+  return 6371 * 2 * Math.asin(Math.sqrt(a));
+}
+
+/** API item with how far it is from the searched point (1 decimal, km). */
+export type NearbyProperty = ApiProperty & { distanceKm?: number };
 
 /** "Any" when undefined; 4 means "4 or more". */
 const countFilter = (n?: number) => (n === undefined ? undefined : n >= 4 ? { gte: 4 } : n);
@@ -21,11 +36,15 @@ const countFilter = (n?: number) => (n === undefined ? undefined : n >= 4 ? { gt
 export class PropertiesService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async list(query: ListPropertiesQuery): Promise<{ items: ApiProperty[]; total: number; page: number; limit: number }> {
+  async list(query: ListPropertiesQuery): Promise<{ items: NearbyProperty[]; total: number; page: number; limit: number }> {
     const page = query.page ?? 1;
     const limit = query.limit ?? DEFAULT_LIMIT;
     const where = this.buildWhere(query);
     const sort = query.sort ?? 'recommended';
+
+    if (query.lat !== undefined && query.lng !== undefined) {
+      return this.listNear(where, query.lat, query.lng, query.radiusKm ?? DEFAULT_RADIUS_KM, sort, page, limit);
+    }
 
     const total = await this.prisma.property.count({ where });
 
@@ -177,6 +196,50 @@ export class PropertiesService {
   async remove(ownerId: string, id: string): Promise<void> {
     const { count } = await this.prisma.property.deleteMany({ where: { id, ownerId } });
     if (!count) throw new NotFoundException('Listing not found.');
+  }
+
+  /**
+   * "Near me": a cheap box around the point first (uses normal column filters),
+   * then the exact distance; nearest first unless a price sort is chosen.
+   */
+  private async listNear(
+    where: Prisma.PropertyWhereInput,
+    lat: number,
+    lng: number,
+    radiusKm: number,
+    sort: string,
+    page: number,
+    limit: number,
+  ) {
+    const latPad = radiusKm / 111; // ~111 km per degree of latitude
+    const lngPad = radiusKm / (111 * Math.max(Math.cos((lat * Math.PI) / 180), 0.01));
+    const candidates = await this.prisma.property.findMany({
+      where: {
+        ...where,
+        latitude: { gte: lat - latPad, lte: lat + latPad },
+        longitude: { gte: lng - lngPad, lte: lng + lngPad },
+      },
+      include: PROPERTY_INCLUDE,
+      take: MAX_NEAR_CANDIDATES,
+    });
+
+    const inRange = candidates
+      .map((p) => ({ p, km: distanceKm(lat, lng, p.latitude, p.longitude) }))
+      .filter((x) => x.km <= radiusKm)
+      .sort((a, b) =>
+        sort === 'price-asc'
+          ? a.p.monthlyRent - b.p.monthlyRent
+          : sort === 'price-desc'
+            ? b.p.monthlyRent - a.p.monthlyRent
+            : sort === 'newest'
+              ? b.p.createdAt.getTime() - a.p.createdAt.getTime()
+              : a.km - b.km,
+      );
+
+    const items = inRange
+      .slice((page - 1) * limit, page * limit)
+      .map(({ p, km }) => ({ ...toApiProperty(p), distanceKm: Math.round(km * 10) / 10 }));
+    return { items, total: inRange.length, page, limit };
   }
 
   private buildWhere(q: ListPropertiesQuery): Prisma.PropertyWhereInput {
