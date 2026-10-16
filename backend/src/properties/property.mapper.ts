@@ -9,6 +9,10 @@ export const PROPERTY_INCLUDE = {
 
 export type PropertyWithRelations = Prisma.PropertyGetPayload<{ include: typeof PROPERTY_INCLUDE }>;
 
+/** ~200 m grid: tenants see roughly where a home is, never the exact building. */
+const APPROX_STEP = 0.002;
+const approx = (deg: number) => Number((Math.round(deg / APPROX_STEP) * APPROX_STEP).toFixed(4));
+
 /** Same shape as the app's `Property` type (lowercase-with-dashes values, dates as strings). */
 export function toApiProperty(p: PropertyWithRelations) {
   const joined = p.owner.createdAt.toISOString();
@@ -20,8 +24,9 @@ export function toApiProperty(p: PropertyWithRelations) {
     status: p.status,
     locationId: p.locationId,
     areaLabel: p.areaLabel,
-    latitude: p.latitude,
-    longitude: p.longitude,
+    // Rounded on purpose (privacy). The owner gets the exact pin in toOwnerProperty.
+    latitude: approx(p.latitude),
+    longitude: approx(p.longitude),
     monthlyRent: p.monthlyRent,
     negotiable: p.negotiable,
     advanceMonths: p.advanceMonths,
@@ -55,9 +60,9 @@ export function toApiProperty(p: PropertyWithRelations) {
 
 export type ApiProperty = ReturnType<typeof toApiProperty>;
 
-/** The owner's own view of a listing: public fields + status + the private address. */
+/** The owner's own view of a listing: public fields + status + the private address and exact pin. */
 export function toOwnerProperty(p: PropertyWithRelations) {
-  return { ...toApiProperty(p), address: p.address ?? '' };
+  return { ...toApiProperty(p), address: p.address ?? '', latitude: p.latitude, longitude: p.longitude };
 }
 
 export type OwnerProperty = ReturnType<typeof toOwnerProperty>;

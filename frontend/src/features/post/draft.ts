@@ -4,6 +4,7 @@ import { floorLabel } from '@/utils/format';
 
 export const TITLE_MAX = 100;
 export const ADDRESS_MAX = 200;
+export const AREA_MAX = 60;
 export const DESCRIPTION_MIN = 30;
 export const DESCRIPTION_MAX = 1000;
 export const RENT_MIN = 1000;
@@ -69,9 +70,13 @@ export type PropertyDraft = {
   title: string;
   type: PropertyType | null;
   rentalCategory: RentalCategory | null;
-  locationId: string | null;
-  /** Area name shown in the form, e.g. "Mirpur, Dhaka". */
-  locationLabel: string;
+  /** Area name, filled from the pin and editable, e.g. "Mohakhali". */
+  areaName: string;
+  /** Exact spot of the building, pinned on the map (only the owner sees it exactly). */
+  latitude: number | null;
+  longitude: number | null;
+  /** Name of the pinned spot, e.g. "GP Chha Road, Mohakhali". */
+  pinLabel: string;
   /** Full address — never shown publicly. */
   address: string;
   monthlyRent: number | null;
@@ -100,8 +105,10 @@ export const EMPTY_DRAFT: PropertyDraft = {
   title: '',
   type: null,
   rentalCategory: null,
-  locationId: null,
-  locationLabel: '',
+  areaName: '',
+  latitude: null,
+  longitude: null,
+  pinLabel: '',
   address: '',
   monthlyRent: null,
   bedrooms: null,
@@ -132,7 +139,10 @@ export function validateBasicInfo(d: PropertyDraft): DraftErrors {
 
   if (!d.type) errors.type = 'Please select a property type.';
   if (!d.rentalCategory) errors.rentalCategory = 'Please select who can rent.';
-  if (!d.locationId) errors.locationId = 'Please select the area.';
+  if (d.latitude === null || d.longitude === null) errors.latitude = 'Please pin the property on the map.';
+  const area = d.areaName.trim();
+  if (!area) errors.areaName = 'Please enter the area, e.g. Mohakhali.';
+  else if (area.length < 2) errors.areaName = 'Area name is too short.';
 
   const address = d.address.trim();
   if (!address) errors.address = 'Please enter the address.';
@@ -203,8 +213,11 @@ export function draftFromProperty(
     title: p.title,
     type: p.type,
     rentalCategory,
-    locationId: p.locationId,
-    locationLabel: p.areaLabel,
+    // "Mirpur, Dhaka" -> "Mirpur"
+    areaName: p.areaLabel.split(',')[0].trim(),
+    latitude: p.latitude,
+    longitude: p.longitude,
+    pinLabel: '',
     address: p.address,
     monthlyRent: p.monthlyRent,
     bedrooms: hasBedrooms(p.type) ? Math.min(p.bedrooms, 4) : 0,

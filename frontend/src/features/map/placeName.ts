@@ -23,6 +23,11 @@ async function fromServer(point: LatLng): Promise<PlaceName | null> {
   return { name: result.data.name, city: result.data.city ?? result.data.name };
 }
 
+/** Just the area for a point ("Mohakhali"), from our server; null if it has no name. */
+export async function areaNameOf(point: LatLng): Promise<string | null> {
+  return (await fromServer(point))?.name ?? null;
+}
+
 type PhoneAddress = { road?: string; area?: string; city?: string };
 
 /** The phone's own geocoder (Android uses Google's data): good road names ("GP Chha Road"). */

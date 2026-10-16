@@ -35,7 +35,7 @@ export function PreviewStep({ draft: d, onEdit, editing }: Props) {
   const basic: Row[] = [
     ['Property Title', d.title.trim()],
     ['Rent For', label(RENTAL_CATEGORY_OPTIONS, d.rentalCategory)],
-    ['Area', d.locationLabel || '—'],
+    ['Area', d.areaName.trim() || '—'],
     ['Address', d.address.trim()],
     ['Price', d.monthlyRent ? `${formatTaka(d.monthlyRent)} / month` : '—'],
   ];

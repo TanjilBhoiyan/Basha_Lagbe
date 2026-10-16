@@ -1,14 +1,17 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { useEffect, useState } from 'react';
+import { router, useFocusEffect } from 'expo-router';
+import { useCallback, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import { AppText, Input, OptionSheet } from '@/components/ui';
-import { locationService } from '@/services/locationService';
+import { pinResult } from '@/features/map/pinResult';
+import { areaNameOf } from '@/features/map/placeName';
 import { colors, radius, spacing } from '@/theme';
-import type { Location } from '@/types/location';
+import { locationLabel } from '@/types/location';
 import { formatBdNumber } from '@/utils/format';
 import {
   ADDRESS_MAX,
+  AREA_MAX,
   PROPERTY_TYPE_OPTIONS,
   RENTAL_CATEGORY_OPTIONS,
   TITLE_MAX,
@@ -16,6 +19,7 @@ import {
   type PropertyDraft,
 } from './draft';
 import { FieldFooter, FieldIcon, FieldLabel, SelectField } from './FormFields';
+import { LocationPinField } from './LocationPinField';
 
 type Props = {
   draft: PropertyDraft;
@@ -24,14 +28,32 @@ type Props = {
 };
 
 export function BasicInfoStep({ draft, errors, onChange }: Props) {
-  const [sheet, setSheet] = useState<'type' | 'category' | 'area' | null>(null);
-  const [areas, setAreas] = useState<Location[]>([]);
+  const [sheet, setSheet] = useState<'type' | 'category' | null>(null);
+  const [findingArea, setFindingArea] = useState(false);
 
-  useEffect(() => {
-    locationService.getAll().then(setAreas);
-  }, []);
+  // Back from the map picker with a new pin: save it, then fill the area from the pin (owner can edit it).
+  useFocusEffect(
+    useCallback(() => {
+      const pin = pinResult.take();
+      if (!pin) return;
+      onChange({ latitude: pin.latitude, longitude: pin.longitude, pinLabel: locationLabel(pin) });
+      setFindingArea(true);
+      areaNameOf(pin)
+        .then((area) => {
+          if (area) onChange({ latitude: pin.latitude, longitude: pin.longitude, pinLabel: locationLabel(pin), areaName: area });
+        })
+        .finally(() => setFindingArea(false));
+    }, [onChange]),
+  );
 
-  const areaLabel = (l: Location) => (l.name === l.city ? l.city : `${l.name}, ${l.city}`);
+  const openPicker = () =>
+    router.push({
+      pathname: '/pick-location',
+      params:
+        draft.latitude !== null && draft.longitude !== null
+          ? { mode: 'post', lat: String(draft.latitude), lng: String(draft.longitude) }
+          : { mode: 'post' },
+    });
 
   const typeLabel = PROPERTY_TYPE_OPTIONS.find((o) => o.value === draft.type)?.label;
   const categoryLabel = RENTAL_CATEGORY_OPTIONS.find((o) => o.value === draft.rentalCategory)?.label;
@@ -95,15 +117,28 @@ export function BasicInfoStep({ draft, errors, onChange }: Props) {
       </View>
 
       <View>
-        <FieldLabel required>Area</FieldLabel>
-        <SelectField
-          icon="map-marker-radius-outline"
-          placeholder="Select area"
-          value={draft.locationLabel || undefined}
-          error={errors.locationId}
-          onPress={() => setSheet('area')}
-          accessibilityLabel="Area"
+        <FieldLabel required>Location on Map</FieldLabel>
+        <LocationPinField
+          latitude={draft.latitude}
+          longitude={draft.longitude}
+          label={draft.pinLabel}
+          error={errors.latitude}
+          onPress={openPicker}
         />
+      </View>
+
+      <View>
+        <FieldLabel required>Area</FieldLabel>
+        <Input
+          value={draft.areaName}
+          onChangeText={(areaName) => onChange({ areaName })}
+          placeholder={findingArea ? 'Finding area…' : 'e.g. Mohakhali'}
+          maxLength={AREA_MAX}
+          prefix={<FieldIcon name="map-marker-radius-outline" />}
+          accessibilityLabel="Area"
+          error={errors.areaName}
+        />
+        <FieldFooter hint="Filled from the pin. Change it if it's not right." />
       </View>
 
       <View>
@@ -154,17 +189,6 @@ export function BasicInfoStep({ draft, errors, onChange }: Props) {
         options={RENTAL_CATEGORY_OPTIONS}
         value={draft.rentalCategory ?? undefined}
         onSelect={(rentalCategory) => onChange({ rentalCategory })}
-        onClose={() => setSheet(null)}
-      />
-      <OptionSheet
-        visible={sheet === 'area'}
-        title="Select Area"
-        options={areas.map((l) => ({ value: l.id, label: areaLabel(l) }))}
-        value={draft.locationId ?? undefined}
-        onSelect={(id) => {
-          const area = areas.find((l) => l.id === id);
-          if (area) onChange({ locationId: area.id, locationLabel: areaLabel(area) });
-        }}
         onClose={() => setSheet(null)}
       />
     </View>

@@ -155,10 +155,22 @@ export class PropertyFieldsDto {
   @IsIn(TENANT_TYPES, { each: true })
   tenantTypes: (typeof TENANT_TYPES)[number][];
 
-  /** Area id from GET /locations, e.g. "dhaka-mirpur" */
+  /** Exact spot of the home, pinned by the owner on the map. Tenants only ever see it rounded (~200 m). */
+  @IsLatitude()
+  latitude: number;
+
+  @IsLongitude()
+  longitude: number;
+
+  /**
+   * Area name, filled from the pin and editable by the owner, e.g. "Mohakhali".
+   * The server finds this area (or creates it) in the pin's city.
+   */
+  @Transform(({ value }) => (typeof value === 'string' ? value.replace(/\s+/g, ' ').trim() : value))
   @IsString()
+  @MinLength(2)
   @MaxLength(60)
-  locationId: string;
+  areaName: string;
 
   /** Exact address — saved but never shown publicly */
   @IsString()

@@ -1,7 +1,10 @@
+import { randomUUID } from 'node:crypto';
+
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 
 import { fromApiEnum } from '../common/enums.js';
-import type { Amenity, Facing, Furnishing, Prisma, TenantType } from '../generated/prisma/client.js';
+import { GeocodeService } from '../geocode/geocode.service.js';
+import type { Amenity, Facing, Furnishing, Location, Prisma, TenantType } from '../generated/prisma/client.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import {
   UPLOADED_IMAGE,
@@ -16,6 +19,10 @@ const DEFAULT_LIMIT = 20;
 const DEFAULT_RADIUS_KM = 5;
 /** Safety cap for the "near me" search (candidates inside the box, before the exact distance check). */
 const MAX_NEAR_CANDIDATES = 1000;
+
+/** "Mohakhali" + "Dhaka" -> "dhaka-mohakhali" (Bangla-only names get a random id). */
+const areaId = (name: string, city: string) =>
+  `${city}-${name}`.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || `area-${randomUUID().slice(0, 8)}`;
 
 /** Straight-line distance in km between two points (Haversine). */
 function distanceKm(lat1: number, lng1: number, lat2: number, lng2: number): number {
@@ -34,7 +41,10 @@ const countFilter = (n?: number) => (n === undefined ? undefined : n >= 4 ? { gt
 
 @Injectable()
 export class PropertiesService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly geocode: GeocodeService,
+  ) {}
 
   async list(query: ListPropertiesQuery): Promise<{ items: NearbyProperty[]; total: number; page: number; limit: number }> {
     const page = query.page ?? 1;
@@ -154,18 +164,17 @@ export class PropertiesService {
 
   /** Form fields -> database columns (shared by create and update). */
   private async fieldsToData(dto: PropertyFieldsDto) {
-    const location = await this.prisma.location.findUnique({ where: { id: dto.locationId } });
-    if (!location) throw new BadRequestException('Please select a valid area.');
     if (dto.floorNumber > dto.totalFloors) {
       throw new BadRequestException('Floor number cannot be higher than total floors.');
     }
 
-    const { tenantTypes, amenities, furnishing, facing, utilityCost, availableFrom, ...rest } = dto;
+    const { tenantTypes, amenities, furnishing, facing, utilityCost, availableFrom, areaName, ...rest } = dto;
+    const location = await this.areaFor(areaName, dto.latitude, dto.longitude);
+
     return {
       ...rest,
+      locationId: location.id,
       areaLabel: location.name === location.city ? location.city : `${location.name}, ${location.city}`,
-      latitude: location.latitude,
-      longitude: location.longitude,
       tenantTypes: tenantTypes.map((t) => fromApiEnum<TenantType>(t)),
       amenities: [...new Set(amenities)].map((a) => fromApiEnum<Amenity>(a)),
       furnishing: fromApiEnum<Furnishing>(furnishing),
@@ -173,6 +182,35 @@ export class PropertiesService {
       utilityIncluded: utilityCost === 'included',
       availableFrom: new Date(availableFrom),
     };
+  }
+
+  /**
+   * The area row for a listing: the owner's area name in the pin's city ("Mohakhali", "Dhaka").
+   * Found by name (any letter case), or created on the spot, so areas come only from real listings.
+   */
+  private async areaFor(areaName: string, lat: number, lng: number): Promise<Location> {
+    const sameName = { name: { equals: areaName, mode: 'insensitive' as const } };
+    const city = (await this.geocode.reverse(lat, lng))?.city ?? (await this.cityNear(lat, lng));
+
+    const existing = city
+      ? await this.prisma.location.findFirst({ where: { ...sameName, city: { equals: city, mode: 'insensitive' } } })
+      : await this.prisma.location.findFirst({ where: sameName }); // no city known: same name anywhere
+    if (existing) return existing;
+
+    const areaCity = city ?? areaName;
+    let id = areaId(areaName, areaCity);
+    if (await this.prisma.location.findUnique({ where: { id } })) id = `${id}-${randomUUID().slice(0, 4)}`;
+    return this.prisma.location.create({ data: { id, name: areaName, city: areaCity, latitude: lat, longitude: lng } });
+  }
+
+  /** Geocoding is down: the city of the closest known area within 30 km, if any. */
+  private async cityNear(lat: number, lng: number): Promise<string | undefined> {
+    const areas = await this.prisma.location.findMany({ select: { city: true, latitude: true, longitude: true } });
+    const near = areas
+      .map((a) => ({ city: a.city, km: distanceKm(lat, lng, a.latitude, a.longitude) }))
+      .filter((a) => a.km <= 30)
+      .sort((a, b) => a.km - b.km)[0];
+    return near?.city;
   }
 
   /** Owner: mark a live listing as rented, or a rented one as available again. */

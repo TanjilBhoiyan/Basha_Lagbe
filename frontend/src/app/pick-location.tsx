@@ -1,6 +1,6 @@
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import * as ExpoLocation from 'expo-location';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Linking, Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -8,6 +8,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppText, Button } from '@/components/ui';
 import { AppMap } from '@/features/map/AppMap';
 import type { AppMapHandle, LatLng } from '@/features/map/mapTypes';
+import { pinResult } from '@/features/map/pinResult';
 import { placeName, type PlaceName } from '@/features/map/placeName';
 import { locationService } from '@/services/locationService';
 import { colors, radius, SCREEN_PADDING, spacing } from '@/theme';
@@ -22,9 +23,18 @@ type GpsState = 'locating' | 'found' | 'denied' | 'blocked' | 'failed';
 /**
  * "Use my current location": opens at the user's GPS position; the pin stays in the
  * middle and the user moves the map until it sits on their home, then confirms.
+ *
+ * mode=post (Add/Edit Property): the owner pins the listing's building. Opens at lat/lng
+ * if given (the saved pin), and on confirm goes back to the form with the pin (pinResult).
  */
 export default function PickLocationScreen() {
   const insets = useSafeAreaInsets();
+  const params = useLocalSearchParams<{ mode?: string; lat?: string; lng?: string }>();
+  const forPost = params.mode === 'post';
+  const saved: LatLng | null =
+    params.lat && params.lng && !Number.isNaN(Number(params.lat)) && !Number.isNaN(Number(params.lng))
+      ? { latitude: Number(params.lat), longitude: Number(params.lng) }
+      : null;
   const mapRef = useRef<AppMapHandle>(null);
 
   const [start, setStart] = useState<LatLng | null>(null);
@@ -60,7 +70,14 @@ export default function PickLocationScreen() {
   }, []);
 
   // Open where the user last chose (or Dhaka), then jump to GPS.
+  // Editing a listing that already has a pin: open on it and don't jump away.
   useEffect(() => {
+    if (saved) {
+      setStart(saved);
+      setCenter(saved);
+      setGps('found');
+      return;
+    }
     locationService.getSelected().then((current) => {
       if (gpsHere.current) return; // GPS was faster: the map already opens there
       const first = current ? { latitude: current.latitude, longitude: current.longitude } : DHAKA;
@@ -68,6 +85,7 @@ export default function PickLocationScreen() {
       setCenter((c) => c ?? first);
     });
     locate();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [locate]);
 
   // Name the place under the pin once the map stops moving.
@@ -94,6 +112,13 @@ export default function PickLocationScreen() {
     if (!center) return;
     setSaving(true);
     const name = place ?? (await placeName(center));
+
+    if (forPost) {
+      pinResult.set({ ...center, name: name.name, city: name.city });
+      goBack();
+      return;
+    }
+
     const pin: Location = {
       id: 'pin',
       name: name.name,
@@ -136,7 +161,7 @@ export default function PickLocationScreen() {
       <View pointerEvents="none" style={styles.pinWrap}>
         <View style={styles.pinLabel}>
           <AppText variant="small" style={styles.pinLabelText}>
-            Your home is here
+            {forPost ? 'Property is here' : 'Your home is here'}
           </AppText>
         </View>
         <MaterialCommunityIcons name="map-marker" size={52} color={colors.primaryDeep} style={styles.pin} />
@@ -147,9 +172,9 @@ export default function PickLocationScreen() {
           <Ionicons name="chevron-back" size={24} color={colors.text} />
         </Pressable>
         <View style={styles.titleCard}>
-          <AppText variant="bodyBold">Pin your location</AppText>
+          <AppText variant="bodyBold">{forPost ? 'Pin your property' : 'Pin your location'}</AppText>
           <AppText variant="small" color="textSecondary">
-            Move the map to put the pin on your area
+            {forPost ? 'Move the map so the pin sits on the building' : 'Move the map to put the pin on your area'}
           </AppText>
         </View>
       </View>
@@ -204,7 +229,9 @@ export default function PickLocationScreen() {
           </View>
         ) : (
           <AppText variant="caption" color="textSecondary">
-            We will show homes within {NEAR_RADIUS_KM} km of this point, nearest first.
+            {forPost
+              ? 'Only you see the exact spot. Tenants see the area and a rough location.'
+              : `We will show homes within ${NEAR_RADIUS_KM} km of this point, nearest first.`}
           </AppText>
         )}
 
