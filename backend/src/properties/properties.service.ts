@@ -6,6 +6,7 @@ import { fromApiEnum } from '../common/enums.js';
 import { GeocodeService } from '../geocode/geocode.service.js';
 import type { Amenity, Facing, Furnishing, Location, Prisma, TenantType } from '../generated/prisma/client.js';
 import { PrismaService } from '../prisma/prisma.service.js';
+import { distanceKm } from '../common/geo.js';
 import {
   UPLOADED_IMAGE,
   type CreatePropertyDto,
@@ -23,15 +24,6 @@ const MAX_NEAR_CANDIDATES = 1000;
 /** "Mohakhali" + "Dhaka" -> "dhaka-mohakhali" (Bangla-only names get a random id). */
 const areaId = (name: string, city: string) =>
   `${city}-${name}`.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || `area-${randomUUID().slice(0, 8)}`;
-
-/** Straight-line distance in km between two points (Haversine). */
-function distanceKm(lat1: number, lng1: number, lat2: number, lng2: number): number {
-  const rad = Math.PI / 180;
-  const dLat = (lat2 - lat1) * rad;
-  const dLng = (lng2 - lng1) * rad;
-  const a = Math.sin(dLat / 2) ** 2 + Math.cos(lat1 * rad) * Math.cos(lat2 * rad) * Math.sin(dLng / 2) ** 2;
-  return 6371 * 2 * Math.asin(Math.sqrt(a));
-}
 
 /** API item with how far it is from the searched point (1 decimal, km). */
 export type NearbyProperty = ApiProperty & { distanceKm?: number };

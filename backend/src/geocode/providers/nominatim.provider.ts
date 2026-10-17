@@ -1,5 +1,6 @@
 import type { ConfigService } from '@nestjs/config';
 
+import { cleanPlaceName as clean } from '../../common/geo.js';
 import type { GeocodeProvider, PlaceName } from '../geocode.provider.js';
 
 const DEFAULT_URL = 'https://nominatim.openstreetmap.org/reverse';
@@ -15,12 +16,9 @@ type NominatimAddress = Partial<
   >
 >;
 
-/** "Dhaka District" -> "Dhaka", "Dhaka Division" -> "Dhaka" */
-const clean = (s?: string) => s?.replace(/\s+(District|Division|City Corporation)$/i, '').trim() || undefined;
-
 /**
  * OpenStreetMap's free place names (same data as our map).
- * .env: GEOCODE_PROVIDER="nominatim" (default). Optional NOMINATIM_EMAIL="you@example.com"
+ * .env: GEOCODE_PROVIDER="nominatim". Optional NOMINATIM_EMAIL="you@example.com"
  * (OpenStreetMap asks heavy users to give a contact). Usage policy:
  * https://operations.osmfoundation.org/policies/nominatim/
  */

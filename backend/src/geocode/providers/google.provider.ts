@@ -1,5 +1,6 @@
 import type { ConfigService } from '@nestjs/config';
 
+import { cleanPlaceName as clean } from '../../common/geo.js';
 import type { GeocodeProvider, PlaceName } from '../geocode.provider.js';
 
 const DEFAULT_URL = 'https://maps.googleapis.com/maps/api/geocode/json';
@@ -8,9 +9,6 @@ const TIMEOUT_MS = 6000;
 type Component = { long_name: string; types: string[] };
 type GeocodeResult = { types: string[]; address_components: Component[] };
 type GeocodeResponse = { status: string; error_message?: string; results?: GeocodeResult[] };
-
-/** "Dhaka District" -> "Dhaka", "Dhaka Division" -> "Dhaka" */
-const clean = (s?: string) => s?.replace(/\s+(District|Division)$/i, '').trim() || undefined;
 
 /** First component (in Google's order) that has one of these types. */
 function pick(results: GeocodeResult[], ...types: string[]) {

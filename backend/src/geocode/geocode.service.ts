@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 
+import { geoCacheKey } from '../common/geo.js';
 import type { GeocodeProvider, PlaceName } from './geocode.provider.js';
 import { GeoapifyProvider } from './providers/geoapify.provider.js';
 import { GoogleProvider } from './providers/google.provider.js';
@@ -8,16 +9,14 @@ import { NominatimProvider } from './providers/nominatim.provider.js';
 
 /**
  * All place-name services we can use. GEOCODE_PROVIDER in .env picks one (default "geoapify").
- * New service (e.g. LocationIQ): make a file in ./providers, then add one line below.
+ * New service (e.g. Google, LocationIQ): make a file in ./providers, then add one line below.
  */
 const PROVIDERS: Record<string, new (config: ConfigService) => GeocodeProvider> = {
   geoapify: GeoapifyProvider, // nearest area name (Mohakhali, Banani), Nominatim as backup
-  google: GoogleProvider, // Google Geocoding (needs billing on the Google Cloud project)
+  google: GoogleProvider, // Google Geocoding (paid after the free monthly quota)
   nominatim: NominatimProvider,
 };
 
-/** Points closer than ~100 m share one cached name (3 decimal places). */
-const cacheKey = (lat: number, lng: number) => `${lat.toFixed(3)},${lng.toFixed(3)}`;
 const MAX_CACHE = 5000;
 
 @Injectable()
@@ -39,7 +38,7 @@ export class GeocodeService {
 
   /** null = no name found (the app then uses the phone's own geocoder). */
   async reverse(lat: number, lng: number): Promise<PlaceName | null> {
-    const key = cacheKey(lat, lng);
+    const key = geoCacheKey(lat, lng);
     if (this.cache.has(key)) return this.cache.get(key) ?? null;
 
     try {

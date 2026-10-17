@@ -1,6 +1,8 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 
+import { geoCacheKey, isPlusCode } from '../common/geo.js';
+
 /** One "suggested address" under the map pin. */
 export type NearbyPlace = {
   id: string;
@@ -24,8 +26,6 @@ const RADIUS_M = 150;
 /** Only the fields we show: the cheaper the field list, the cheaper the call. */
 const FIELD_MASK = 'places.id,places.displayName,places.formattedAddress,places.location';
 
-/** Points closer than ~100 m share one cached list (3 decimal places). */
-const cacheKey = (lat: number, lng: number) => `${lat.toFixed(3)},${lng.toFixed(3)}`;
 const MAX_CACHE = 2000;
 const CACHE_TTL_MS = 24 * 60 * 60 * 1000;
 /** Safety cap so we stay inside Google's free monthly quota (~5,000 calls). */
@@ -36,7 +36,7 @@ function cleanAddress(address: string) {
   return address
     .split(',')
     .map((part) => part.trim())
-    .filter((part) => part && !/^[23456789CFGHJMPQRVWX]{4,8}\+[23456789CFGHJMPQRVWX]{2,3}$/i.test(part))
+    .filter((part) => part && !isPlusCode(part))
     .filter((part) => part.toLowerCase() !== 'bangladesh')
     .join(', ');
 }
@@ -66,7 +66,7 @@ export class PlacesService {
   async nearby(lat: number, lng: number): Promise<NearbyPlace[]> {
     if (!this.key) return [];
 
-    const key = cacheKey(lat, lng);
+    const key = geoCacheKey(lat, lng);
     const hit = this.cache.get(key);
     if (hit && Date.now() - hit.at < CACHE_TTL_MS) return hit.places;
 
