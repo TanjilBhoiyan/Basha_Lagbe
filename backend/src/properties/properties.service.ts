@@ -7,8 +7,8 @@ import { GeocodeService } from '../geocode/geocode.service.js';
 import type { Amenity, Facing, Furnishing, Location, Prisma, TenantType } from '../generated/prisma/client.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { distanceKm } from '../common/geo.js';
+import { StorageService } from '../storage/storage.service.js';
 import {
-  UPLOADED_IMAGE,
   type CreatePropertyDto,
   type ListPropertiesQuery,
   type PropertyFieldsDto,
@@ -36,6 +36,7 @@ export class PropertiesService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly geocode: GeocodeService,
+    private readonly storage: StorageService,
   ) {}
 
   async list(query: ListPropertiesQuery): Promise<{ items: NearbyProperty[]; total: number; page: number; limit: number }> {
@@ -116,6 +117,11 @@ export class PropertiesService {
 
   /** Owner: post a new listing. It goes live straight away (bad listings can be removed later). */
   async create(ownerId: string, dto: CreatePropertyDto): Promise<ApiProperty> {
+    // Every photo must be one we stored (R2 or this server), never an outside link.
+    if (dto.images.some((url) => !this.storage.isOurPhoto(url, 'properties'))) {
+      throw new BadRequestException('Please upload the photos again.');
+    }
+
     const data = await this.fieldsToData(dto);
     const property = await this.prisma.property.create({
       data: {
@@ -138,7 +144,7 @@ export class PropertiesService {
     if (!existing) throw new NotFoundException('Listing not found.');
 
     const current = new Set(existing.images.map((i) => i.url));
-    if (dto.images.some((url) => !current.has(url) && !UPLOADED_IMAGE.test(url))) {
+    if (dto.images.some((url) => !current.has(url) && !this.storage.isOurPhoto(url, 'properties'))) {
       throw new BadRequestException('Please upload the photos again.');
     }
 

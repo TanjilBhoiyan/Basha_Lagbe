@@ -1,7 +1,5 @@
-import { unlink } from 'node:fs/promises';
-import { join } from 'node:path';
-
 import {
+  BadRequestException,
   ConflictException,
   ForbiddenException,
   Injectable,
@@ -14,8 +12,8 @@ import bcrypt from 'bcryptjs';
 import { normalizeBdPhone } from '../common/phone.js';
 import { OtpPurpose, type User } from '../generated/prisma/client.js';
 import { PrismaService } from '../prisma/prisma.service.js';
+import { StorageService } from '../storage/storage.service.js';
 import {
-  UPLOADED_AVATAR,
   type LoginDto,
   type OtpPurposeInput,
   type RegisterDto,
@@ -46,18 +44,13 @@ export function toPublicUser(u: User): PublicUser {
   };
 }
 
-/** Deletes a photo we stored ourselves (best effort — a missing file is fine). */
-async function removeAvatarFile(url: string) {
-  if (!UPLOADED_AVATAR.test(url)) return;
-  await unlink(join(process.cwd(), 'public', url.replace('/static/', ''))).catch(() => undefined);
-}
-
 @Injectable()
 export class AuthService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly otp: OtpService,
     private readonly jwt: JwtService,
+    private readonly storage: StorageService,
   ) {}
 
   /** Creates the account (unverified) and sends an OTP to the phone. */
@@ -168,6 +161,11 @@ export class AuthService {
     const user = await this.prisma.user.findUnique({ where: { id: userId } });
     if (!user) throw new UnauthorizedException('Account not found.');
 
+    // A new photo must be one we stored (keeping the current one is fine).
+    if (dto.avatarUrl && dto.avatarUrl !== user.avatarUrl && !this.storage.isOurPhoto(dto.avatarUrl, 'avatars')) {
+      throw new BadRequestException('Please upload the photo again.');
+    }
+
     if (dto.email !== user.email) {
       const taken = await this.prisma.user.findUnique({ where: { email: dto.email } });
       if (taken) throw new ConflictException('This email is already used by another account.');
@@ -183,8 +181,8 @@ export class AuthService {
       },
     });
 
-    // The old photo is no longer used anywhere: delete the file.
-    if (user.avatarUrl && user.avatarUrl !== updated.avatarUrl) await removeAvatarFile(user.avatarUrl);
+    // The old photo is no longer used anywhere: delete the file (R2 or this server).
+    if (user.avatarUrl && user.avatarUrl !== updated.avatarUrl) await this.storage.remove(user.avatarUrl, 'avatars');
     return toPublicUser(updated);
   }
 

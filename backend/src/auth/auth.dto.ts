@@ -101,9 +101,6 @@ export class ResetPasswordDto {
   newPassword: string;
 }
 
-/** Photos uploaded through POST /uploads/avatar. */
-export const UPLOADED_AVATAR = /^\/static\/uploads\/avatars\/[0-9a-f-]{36}\.(jpg|png|webp)$/;
-
 /** PATCH /auth/me — Edit Profile. The phone number can't be changed (it is the login ID). */
 export class UpdateProfileDto {
   @Transform(trim)
@@ -116,8 +113,9 @@ export class UpdateProfileDto {
   @IsEmail({}, { message: 'Enter a valid email address' })
   email: string;
 
-  /** New photo URL from /uploads/avatar, null to remove the photo, or leave out to keep it. */
+  /** New photo URL from /uploads/avatar (checked in the service), null to remove the photo, or leave out to keep it. */
   @IsOptional()
-  @Matches(UPLOADED_AVATAR, { message: 'Please upload the photo again.' })
+  @IsString()
+  @MaxLength(300)
   avatarUrl?: string | null;
 }

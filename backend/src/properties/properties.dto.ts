@@ -260,8 +260,6 @@ export class PropertyFieldsDto {
   description: string;
 }
 
-/** A photo URL returned by POST /uploads/property-image. */
-export const UPLOADED_IMAGE = /^\/static\/uploads\/properties\/[0-9a-f-]{36}\.(jpg|png|webp)$/;
 
 /** POST /properties — what the Add Property form sends. */
 export class CreatePropertyDto extends PropertyFieldsDto {
@@ -269,7 +267,8 @@ export class CreatePropertyDto extends PropertyFieldsDto {
   @IsArray()
   @ArrayMinSize(1)
   @ArrayMaxSize(10)
-  @Matches(UPLOADED_IMAGE, { each: true, message: 'Please upload the photos again.' })
+    @IsString({ each: true })
+  @MaxLength(300, { each: true })
   images: string[];
 }
 
