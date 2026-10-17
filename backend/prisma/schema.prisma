@@ -170,6 +170,7 @@ model Property {
   minStayMonths         Int             @default(0) @map("min_stay_months")
   bedrooms              Int             @default(0)
   bathrooms             Int             @default(0)
+  balconies             Int             @default(0)
   sizeSqft              Int?            @map("size_sqft")
   floorNumber           Int             @default(0) @map("floor_number")
   totalFloors           Int             @default(1) @map("total_floors")

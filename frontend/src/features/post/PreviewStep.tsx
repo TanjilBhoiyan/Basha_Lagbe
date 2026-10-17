@@ -44,6 +44,7 @@ export function PreviewStep({ draft: d, onEdit, editing }: Props) {
     ['Property Type', label(PROPERTY_TYPE_OPTIONS, d.type)],
     ...(hasBedrooms(d.type) ? [['Bedrooms', d.bedrooms === 4 ? '4+' : String(d.bedrooms ?? '—')] as Row] : []),
     ['Bathrooms', d.bathrooms === 4 ? '4+' : String(d.bathrooms ?? '—')],
+    ...(hasBedrooms(d.type) ? [['Balconies', d.balconies === 3 ? '3+' : String(d.balconies ?? '—')] as Row] : []),
     ['Size', d.sizeSqft ? `${d.sizeSqft} Sq. Ft.` : '—'],
     ['Floor', d.floorNumber === null ? '—' : `${floorLabel(d.floorNumber)} of ${d.totalFloors ?? '—'}`],
     ['Facing', d.facing ? label(FACING_OPTIONS, d.facing) : 'Not set'],

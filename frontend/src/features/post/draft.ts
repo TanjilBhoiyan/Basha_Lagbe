@@ -83,6 +83,8 @@ export type PropertyDraft = {
   // Step 2 — Property Details
   bedrooms: number | null;
   bathrooms: number | null;
+    /** 0..3 (3 = 3 or more). Not asked for offices and shops. */
+  balconies: number | null;
   sizeSqft: number | null;
   floorNumber: number | null;
   totalFloors: number | null;
@@ -113,6 +115,7 @@ export const EMPTY_DRAFT: PropertyDraft = {
   monthlyRent: null,
   bedrooms: null,
   bathrooms: null,
+  balconies: null,
   sizeSqft: null,
   floorNumber: null,
   totalFloors: null,
@@ -160,6 +163,7 @@ export function validateDetails(d: PropertyDraft): DraftErrors {
   if (!d.type) errors.type = 'Please select a property type.';
   if (hasBedrooms(d.type) && !d.bedrooms) errors.bedrooms = 'Please select bedrooms.';
   if (d.bathrooms === null) errors.bathrooms = 'Please select bathrooms.';
+  if (hasBedrooms(d.type) && d.balconies === null) errors.balconies = 'Please select balconies.';
 
   // Size is optional; only check it when given.
   if (d.sizeSqft !== null && d.sizeSqft < 50) errors.sizeSqft = 'Size looks too small. Please check it.';
@@ -222,6 +226,7 @@ export function draftFromProperty(
     monthlyRent: p.monthlyRent,
     bedrooms: hasBedrooms(p.type) ? Math.min(p.bedrooms, 4) : 0,
     bathrooms: Math.min(Math.max(p.bathrooms, 1), 4),
+    balconies: hasBedrooms(p.type) ? Math.min(p.balconies ?? 0, 3) : 0,
     sizeSqft: p.sizeSqft ?? null,
     floorNumber: p.floorNumber,
     totalFloors: p.totalFloors,

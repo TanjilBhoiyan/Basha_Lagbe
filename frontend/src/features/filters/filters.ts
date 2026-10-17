@@ -76,7 +76,6 @@ export const AMENITY_OPTIONS: { value: Amenity; label: string; icon: IconName }[
   { value: 'cctv', label: 'CCTV', icon: 'cctv' },
   { value: 'gas', label: 'Gas Connection', icon: 'fire' },
   { value: 'water', label: 'Water Supply', icon: 'water' },
-  { value: 'balcony', label: 'Balcony', icon: 'balcony' },
   { value: 'fire-safety', label: 'Fire Safety', icon: 'fire-extinguisher' },
 ];
 

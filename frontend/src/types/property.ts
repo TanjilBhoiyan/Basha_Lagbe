@@ -68,6 +68,7 @@ export type Property = {
   minStayMonths: number;
   bedrooms: number;
   bathrooms: number;
+  balconies: number;
   sizeSqft?: number;
   floorNumber: number;
   totalFloors: number;

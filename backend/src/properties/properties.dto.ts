@@ -213,6 +213,13 @@ export class PropertyFieldsDto {
   @Min(0)
   @Max(10)
   bathrooms: number;
+  
+    /** Optional so older app versions still work; 0 when not sent. */
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  @Max(10)
+  balconies?: number;
 
   /** Optional: many owners don't know it. */
   @IsOptional()

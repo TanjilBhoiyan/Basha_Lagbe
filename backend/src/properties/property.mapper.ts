@@ -36,6 +36,7 @@ export function toApiProperty(p: PropertyWithRelations) {
     minStayMonths: p.minStayMonths,
     bedrooms: p.bedrooms,
     bathrooms: p.bathrooms,
+    balconies: p.balconies,
     sizeSqft: p.sizeSqft ?? undefined,
     floorNumber: p.floorNumber,
     totalFloors: p.totalFloors,

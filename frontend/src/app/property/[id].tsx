@@ -105,6 +105,14 @@ export default function PropertyDetailsScreen() {
   const specs: { icon: IoniconName; text: string }[] = [
     ...(property.bedrooms > 0 ? [{ icon: 'bed-outline' as const, text: plural(property.bedrooms, 'Bed') }] : []),
     { icon: 'water-outline', text: plural(property.bathrooms, 'Bath') },
+    ...(property.balconies > 0
+      ? [
+          {
+            icon: 'sunny-outline' as const,
+            text: `${property.balconies} ${property.balconies === 1 ? 'Balcony' : 'Balconies'}`,
+          },
+        ]
+      : []),
     ...(property.sizeSqft ? [{ icon: 'resize-outline' as const, text: `${formatBdNumber(property.sizeSqft)} sqft` }] : []),
     { icon: 'business-outline', text: floorLabel(property.floorNumber) },
   ];
@@ -148,11 +156,14 @@ export default function PropertyDetailsScreen() {
             ) : null}
           </View>
 
+          {/* 3 per row, so 4–5 specs (with balconies and size) still fit on small phones. */}
           <View style={styles.specs}>
-            {specs.map((s, i) => (
-              <View key={s.text} style={[styles.spec, i > 0 && styles.specDivider]}>
+            {specs.map((s) => (
+              <View key={s.text} style={styles.spec}>
                 <Ionicons name={s.icon} size={20} color={colors.textSecondary} />
-                <AppText variant="caption">{s.text}</AppText>
+                <AppText variant="caption" numberOfLines={1} style={styles.flexShrink}>
+                  {s.text}
+                </AppText>
               </View>
             ))}
           </View>
@@ -311,6 +322,7 @@ const styles = StyleSheet.create({
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.white, padding: spacing.xl },
   scroll: { paddingBottom: spacing.xxl },
   flex: { flex: 1 },
+  flexShrink: { flexShrink: 1 },
   bold: { fontWeight: '700' },
   body: { paddingHorizontal: SCREEN_PADDING, paddingTop: spacing.md, gap: spacing.sm },
   titleRow: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm },
@@ -325,9 +337,22 @@ const styles = StyleSheet.create({
     borderRadius: radius.sm,
     backgroundColor: colors.primaryLight,
   },
-  specs: { flexDirection: 'row', marginTop: spacing.sm },
-  spec: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.xs },
-  specDivider: { borderLeftWidth: 1, borderLeftColor: colors.border },
+  specs: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginTop: spacing.sm,
+    paddingVertical: spacing.sm,
+    borderRadius: radius.md,
+    backgroundColor: colors.surface,
+  },
+  spec: {
+    width: '33.33%',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs + 2,
+  },
   separator: { height: 1, backgroundColor: colors.border, marginVertical: spacing.md },
   description: { lineHeight: 23 },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginTop: spacing.sm },

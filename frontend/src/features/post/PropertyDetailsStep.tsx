@@ -34,6 +34,14 @@ const COUNT_OPTIONS = [
   { value: 4, label: '4+' },
 ];
 
+/** Balconies: 0 is common, 3 means "3 or more". */
+const BALCONY_OPTIONS = [
+  { value: 0, label: '0' },
+  { value: 1, label: '1' },
+  { value: 2, label: '2' },
+  { value: 3, label: '3+' },
+];
+
 const FURNISH_CHOICES = FURNISHING_OPTIONS.map((f) => ({
   value: f.value,
   label: f.value === 'semi-furnished' ? 'Semi' : f.label,
@@ -99,6 +107,19 @@ export function PropertyDetailsStep({ draft, errors, onChange }: Props) {
           accessibilityLabel="Bathrooms"
         />
       </View>
+
+      {hasBedrooms(draft.type) ? (
+        <View>
+          <FieldLabel required>Balconies</FieldLabel>
+          <ChoiceRow
+            options={BALCONY_OPTIONS}
+            value={draft.balconies}
+            onChange={(balconies) => onChange({ balconies })}
+            error={errors.balconies}
+            accessibilityLabel="Balconies"
+          />
+        </View>
+      ) : null}
 
       <View>
         <FieldLabel>Size (Sq. Ft.)</FieldLabel>
@@ -259,7 +280,7 @@ export function PropertyDetailsStep({ draft, errors, onChange }: Props) {
         title="Property Type"
         options={PROPERTY_TYPE_OPTIONS}
         value={draft.type ?? undefined}
-        onSelect={(type) => onChange({ type, ...(hasBedrooms(type) ? null : { bedrooms: 0 }) })}
+        onSelect={(type) => onChange({ type, ...(hasBedrooms(type) ? null : { bedrooms: 0, balconies: 0 }) })}
         onClose={close}
       />
       <OptionSheet
