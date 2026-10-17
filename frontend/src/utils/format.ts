@@ -12,12 +12,12 @@ export function formatTaka(value: number): string {
   return `৳ ${formatBdNumber(value)}`;
 }
 
-/** "1 Bed", "3 Beds" */
-export function plural(count: number, word: string): string {
-  return `${count} ${word}${count === 1 ? '' : 's'}`;
+/** "1 Bed", "3 Beds"; irregular words get their plural: plural(2, 'Balcony', 'Balconies'). */
+export function plural(count: number, word: string, many = `${word}s`): string {
+  return `${count} ${count === 1 ? word : many}`;
 }
 
-/** 1 -> "1st Floor", 5 -> "5th Floor"; 0 -> "Ground Floor". */
+/** 1 -> "1st", 2 -> "2nd", 5 -> "5th"; 0 -> "Ground". */
 export function floorLabel(floor: number): string {
   if (floor === 0) return 'Ground Floor';
   const mod100 = floor % 100;

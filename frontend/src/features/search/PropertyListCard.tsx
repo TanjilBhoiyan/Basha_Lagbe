@@ -2,10 +2,11 @@ import { Ionicons } from '@expo/vector-icons';
 import { Image, Pressable, StyleSheet, View } from 'react-native';
 
 import { AppText } from '@/components/ui';
+import { listingSpecs } from '@/features/property/listingSpecs';
 import { colors, radius, spacing } from '@/theme';
 import type { Property } from '@/types/property';
 import { formatDistance } from '@/utils/distance';
-import { formatBdNumber, formatTaka, plural } from '@/utils/format';
+import { formatTaka } from '@/utils/format';
 
 type Props = {
   property: Property;
@@ -86,19 +87,11 @@ export function PropertyListCard({
         </AppText>
 
         <View style={styles.specs}>
-          {property.bedrooms > 0 ? (
-            <AppText variant="small" color="textSecondary">
-              {plural(property.bedrooms, 'Bed')}
+          {listingSpecs(property).map((s) => (
+            <AppText key={s.text} variant="small" color="textSecondary">
+              {s.text}
             </AppText>
-          ) : null}
-          <AppText variant="small" color="textSecondary">
-            {plural(property.bathrooms, 'Bath')}
-          </AppText>
-          {property.sizeSqft ? (
-            <AppText variant="small" color="textSecondary">
-              {formatBdNumber(property.sizeSqft)} sqft
-            </AppText>
-          ) : null}
+          ))}
         </View>
       </View>
     </Pressable>

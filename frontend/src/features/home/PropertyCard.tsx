@@ -2,10 +2,11 @@ import { Ionicons } from '@expo/vector-icons';
 import { Image, Linking, Pressable, StyleSheet, View } from 'react-native';
 
 import { AppText } from '@/components/ui';
+import { listingSpecs, type ListingSpec } from '@/features/property/listingSpecs';
 import { colors, radius, spacing } from '@/theme';
 import type { Property } from '@/types/property';
 import { formatDistance } from '@/utils/distance';
-import { formatBdNumber, formatTaka, plural } from '@/utils/format';
+import { formatTaka } from '@/utils/format';
 
 type Props = {
   property: Property;
@@ -82,13 +83,9 @@ export function PropertyCard({ property, width, isFavorite, onToggleFavorite, on
         </AppText>
 
         <View style={styles.specs}>
-          {property.bedrooms > 0 ? (
-            <Spec icon="bed-outline" text={plural(property.bedrooms, 'Bed')} />
-          ) : null}
-          <Spec icon="water-outline" text={plural(property.bathrooms, 'Bath')} />
-          {property.sizeSqft ? (
-            <Spec icon="resize-outline" text={`${formatBdNumber(property.sizeSqft)} sqft`} />
-          ) : null}
+          {listingSpecs(property).map((s) => (
+            <Spec key={s.text} icon={s.icon} text={s.text} />
+          ))}
         </View>
 
         <Pressable
@@ -107,7 +104,7 @@ export function PropertyCard({ property, width, isFavorite, onToggleFavorite, on
   );
 }
 
-function Spec({ icon, text }: { icon: 'bed-outline' | 'water-outline' | 'resize-outline'; text: string }) {
+function Spec({ icon, text }: ListingSpec) {
   return (
     <View style={styles.row}>
       <Ionicons name={icon} size={14} color={colors.textSecondary} />

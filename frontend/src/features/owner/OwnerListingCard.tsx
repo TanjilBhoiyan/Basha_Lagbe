@@ -3,10 +3,11 @@ import type { ComponentProps } from 'react';
 import { Image, Pressable, StyleSheet, View } from 'react-native';
 
 import { AppText } from '@/components/ui';
+import { listingSpecs } from '@/features/property/listingSpecs';
 import { colors, radius, spacing } from '@/theme';
 import type { ListingStatus } from '@/types/listing';
 import type { Property } from '@/types/property';
-import { formatBdNumber, formatTaka, plural } from '@/utils/format';
+import { formatTaka } from '@/utils/format';
 import { LISTING_STATUS_STYLE } from './listingStatus';
 
 type Props = {
@@ -18,11 +19,7 @@ type Props = {
 
 export function OwnerListingCard({ property, status, onView, onEdit }: Props) {
   const badge = LISTING_STATUS_STYLE[status];
-  const specs = [
-    ...(property.bedrooms > 0 ? [plural(property.bedrooms, 'Bed')] : []),
-    plural(property.bathrooms, 'Bath'),
-        ...(property.sizeSqft ? [`${formatBdNumber(property.sizeSqft)} sqft`] : []),
-  ];
+  const specs = listingSpecs(property).map((s) => s.text);
 
   return (
     <View style={styles.card}>

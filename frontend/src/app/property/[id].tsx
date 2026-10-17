@@ -24,7 +24,9 @@ import { session } from '@/services/session';
 import { colors, radius, SCREEN_PADDING, spacing } from '@/theme';
 import type { Property } from '@/types/property';
 import { comingSoon } from '@/utils/comingSoon';
-import { floorLabel, formatBdNumber, formatTaka, plural } from '@/utils/format';
+import { listingSpecs } from '@/features/property/listingSpecs';
+import { formatTaka } from '@/utils/format';
+
 
 type IoniconName = ComponentProps<typeof Ionicons>['name'];
 
@@ -111,20 +113,7 @@ export default function PropertyDetailsScreen() {
   const openInfo = () =>
     router.push({ pathname: '/amenities/[id]', params: { id: property.id } });
 
-  const specs: { icon: IoniconName; text: string }[] = [
-    ...(property.bedrooms > 0 ? [{ icon: 'bed-outline' as const, text: plural(property.bedrooms, 'Bed') }] : []),
-    { icon: 'water-outline', text: plural(property.bathrooms, 'Bath') },
-    ...(property.balconies > 0
-      ? [
-          {
-            icon: 'sunny-outline' as const,
-            text: `${property.balconies} ${property.balconies === 1 ? 'Balcony' : 'Balconies'}`,
-          },
-        ]
-      : []),
-    ...(property.sizeSqft ? [{ icon: 'resize-outline' as const, text: `${formatBdNumber(property.sizeSqft)} sqft` }] : []),
-    { icon: 'business-outline', text: floorLabel(property.floorNumber) },
-  ];
+  const specs = listingSpecs(property, true);
 
   return (
     <View style={styles.screen}>
