@@ -161,9 +161,9 @@ export function validateDetails(d: PropertyDraft): DraftErrors {
   if (hasBedrooms(d.type) && !d.bedrooms) errors.bedrooms = 'Please select bedrooms.';
   if (d.bathrooms === null) errors.bathrooms = 'Please select bathrooms.';
 
-  if (d.sizeSqft === null) errors.sizeSqft = 'Please enter the size.';
-  else if (d.sizeSqft < 50) errors.sizeSqft = 'Size looks too small. Please check it.';
-  else if (d.sizeSqft > 100000) errors.sizeSqft = 'Size looks too big. Please check it.';
+  // Size is optional; only check it when given.
+  if (d.sizeSqft !== null && d.sizeSqft < 50) errors.sizeSqft = 'Size looks too small. Please check it.';
+  else if (d.sizeSqft !== null && d.sizeSqft > 100000) errors.sizeSqft = 'Size looks too big. Please check it.';
 
   if (d.floorNumber === null) errors.floorNumber = 'Please select the floor.';
   if (d.totalFloors === null) errors.totalFloors = 'Please select total floors.';
@@ -222,7 +222,7 @@ export function draftFromProperty(
     monthlyRent: p.monthlyRent,
     bedrooms: hasBedrooms(p.type) ? Math.min(p.bedrooms, 4) : 0,
     bathrooms: Math.min(Math.max(p.bathrooms, 1), 4),
-    sizeSqft: p.sizeSqft,
+    sizeSqft: p.sizeSqft ?? null,
     floorNumber: p.floorNumber,
     totalFloors: p.totalFloors,
     facing: p.facing ?? null,

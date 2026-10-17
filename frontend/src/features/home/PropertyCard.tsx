@@ -86,7 +86,9 @@ export function PropertyCard({ property, width, isFavorite, onToggleFavorite, on
             <Spec icon="bed-outline" text={plural(property.bedrooms, 'Bed')} />
           ) : null}
           <Spec icon="water-outline" text={plural(property.bathrooms, 'Bath')} />
-          <Spec icon="resize-outline" text={`${formatBdNumber(property.sizeSqft)} sqft`} />
+          {property.sizeSqft ? (
+            <Spec icon="resize-outline" text={`${formatBdNumber(property.sizeSqft)} sqft`} />
+          ) : null}
         </View>
 
         <Pressable

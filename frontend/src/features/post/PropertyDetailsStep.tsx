@@ -101,7 +101,7 @@ export function PropertyDetailsStep({ draft, errors, onChange }: Props) {
       </View>
 
       <View>
-        <FieldLabel required>Size (Sq. Ft.)</FieldLabel>
+        <FieldLabel>Size (Sq. Ft.)</FieldLabel>
         <Input
           value={draft.sizeSqft === null ? '' : String(draft.sizeSqft)}
           onChangeText={(t) => onChange({ sizeSqft: toNumber(t, 6) })}

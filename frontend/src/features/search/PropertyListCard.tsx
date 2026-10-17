@@ -94,9 +94,11 @@ export function PropertyListCard({
           <AppText variant="small" color="textSecondary">
             {plural(property.bathrooms, 'Bath')}
           </AppText>
-          <AppText variant="small" color="textSecondary">
-            {formatBdNumber(property.sizeSqft)} sqft
-          </AppText>
+          {property.sizeSqft ? (
+            <AppText variant="small" color="textSecondary">
+              {formatBdNumber(property.sizeSqft)} sqft
+            </AppText>
+          ) : null}
         </View>
       </View>
     </Pressable>

@@ -105,7 +105,7 @@ export default function PropertyDetailsScreen() {
   const specs: { icon: IoniconName; text: string }[] = [
     ...(property.bedrooms > 0 ? [{ icon: 'bed-outline' as const, text: plural(property.bedrooms, 'Bed') }] : []),
     { icon: 'water-outline', text: plural(property.bathrooms, 'Bath') },
-    { icon: 'resize-outline', text: `${formatBdNumber(property.sizeSqft)} sqft` },
+    ...(property.sizeSqft ? [{ icon: 'resize-outline' as const, text: `${formatBdNumber(property.sizeSqft)} sqft` }] : []),
     { icon: 'business-outline', text: floorLabel(property.floorNumber) },
   ];
 

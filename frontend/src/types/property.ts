@@ -68,7 +68,7 @@ export type Property = {
   minStayMonths: number;
   bedrooms: number;
   bathrooms: number;
-  sizeSqft: number;
+  sizeSqft?: number;
   floorNumber: number;
   totalFloors: number;
   /** Which way the main side / balcony faces. */

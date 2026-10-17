@@ -42,7 +42,7 @@ function toBody(d: PropertyDraft, images: string[]) {
     minStayMonths: d.minStayMonths,
     bedrooms: hasBedrooms(d.type) ? d.bedrooms : 0,
     bathrooms: d.bathrooms,
-    sizeSqft: d.sizeSqft,
+    sizeSqft: d.sizeSqft ?? undefined,
     floorNumber: d.floorNumber,
     totalFloors: d.totalFloors,
     facing: d.facing ?? undefined,

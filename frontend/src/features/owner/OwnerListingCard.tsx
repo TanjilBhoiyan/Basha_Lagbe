@@ -21,7 +21,7 @@ export function OwnerListingCard({ property, status, onView, onEdit }: Props) {
   const specs = [
     ...(property.bedrooms > 0 ? [plural(property.bedrooms, 'Bed')] : []),
     plural(property.bathrooms, 'Bath'),
-    `${formatBdNumber(property.sizeSqft)} sqft`,
+        ...(property.sizeSqft ? [`${formatBdNumber(property.sizeSqft)} sqft`] : []),
   ];
 
   return (

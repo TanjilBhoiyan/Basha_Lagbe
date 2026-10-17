@@ -214,10 +214,12 @@ export class PropertyFieldsDto {
   @Max(10)
   bathrooms: number;
 
+  /** Optional: many owners don't know it. */
+  @IsOptional()
   @IsInt()
   @Min(50)
   @Max(100000)
-  sizeSqft: number;
+  sizeSqft?: number
 
   /** 0 = ground floor */
   @IsInt()

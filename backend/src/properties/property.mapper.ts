@@ -36,7 +36,7 @@ export function toApiProperty(p: PropertyWithRelations) {
     minStayMonths: p.minStayMonths,
     bedrooms: p.bedrooms,
     bathrooms: p.bathrooms,
-    sizeSqft: p.sizeSqft,
+    sizeSqft: p.sizeSqft ?? undefined,
     floorNumber: p.floorNumber,
     totalFloors: p.totalFloors,
     facing: p.facing ? toApiEnum(p.facing) : undefined,
