@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { Alert, Pressable, StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 
 import { AuthLayout } from '@/components/auth/AuthLayout';
 import { PhoneInput } from '@/components/auth/PhoneInput';
@@ -19,6 +19,7 @@ import { goToAppHome } from '@/services/navigation';
 import { session } from '@/services/session';
 import { colors, spacing } from '@/theme';
 import type { LoginMethod } from '@/types/auth';
+import { comingSoon } from '@/utils/comingSoon';
 import { validateBdPhone, validateEmail, validatePasswordPresent } from '@/utils/validation';
 
 type Errors = { identifier?: string; password?: string; form?: string };
@@ -54,7 +55,7 @@ export default function LoginScreen() {
   };
 
   const handleGoogle = () => {
-    Alert.alert('Coming soon', 'Google sign-in will be available in a later version.');
+    comingSoon('Google sign-in');
   };
 
   return (

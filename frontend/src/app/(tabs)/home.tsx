@@ -1,7 +1,6 @@
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import {
-  Alert,
   RefreshControl,
   ScrollView,
   StyleSheet,
@@ -31,6 +30,7 @@ import { propertyService } from '@/services/propertyService';
 import { colors, SCREEN_PADDING, spacing } from '@/theme';
 import { locationLabel, NEAR_RADIUS_KM, type Location } from '@/types/location';
 import type { Property } from '@/types/property';
+import { comingSoon } from '@/utils/comingSoon';
 
 export default function HomeScreen() {
   const { width } = useWindowDimensions();
@@ -88,9 +88,6 @@ export default function HomeScreen() {
   const toggleFavorite = async (id: string) => {
     setFavorites(await propertyService.toggleFavorite(id));
   };
-
-  const comingSoon = (feature: string) =>
-    Alert.alert('Coming soon', `${feature} will be available in a later step.`);
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>

@@ -3,11 +3,10 @@ import { Alert, Linking } from 'react-native';
 
 import { APP_CONFIG } from '@/config/app';
 import { session } from '@/services/session';
+import { comingSoon } from '@/utils/comingSoon';
 
-/** Shared by Profile and Settings. */
-export function comingSoon(feature: string) {
-  Alert.alert('Coming soon', `${feature} will be available in a later step.`);
-}
+// Profile and Settings import it from here.
+export { comingSoon };
 
 export function confirmLogout() {
   Alert.alert('Log out?', 'You will need to log in again to use your account.', [

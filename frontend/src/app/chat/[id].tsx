@@ -25,6 +25,7 @@ import { OwnerAvatar } from '@/features/property/OwnerAvatar';
 import { chatService } from '@/services/chatService';
 import { colors, radius, SCREEN_PADDING, spacing } from '@/theme';
 import type { ChatMessage, ChatSummary } from '@/types/chat';
+import { comingSoon } from '@/utils/comingSoon';
 
 type ListItem =
   | { kind: 'day'; key: string; label: string }
@@ -83,7 +84,7 @@ export default function ChatScreen() {
       if (summary) chatService.markRead(id);
     })();
 
-    // Live: new messages in this chat, and green ticks when the other person reads.
+    // Live: new messages in this chat, and blue ticks when the other person reads.
     const offMessage = chatService.onMessage((m) => {
       if (m.conversationId !== id) return;
       setMessages((list) => merge(list, [m]));
@@ -159,7 +160,7 @@ export default function ChatScreen() {
       {
         text: 'Report this user',
         style: 'destructive' as const,
-        onPress: () => Alert.alert('Coming soon', 'Reporting will be available in a later step.'),
+        onPress: () => comingSoon('Reporting'),
       },
       { text: 'Cancel', style: 'cancel' as const },
     ]);
@@ -274,7 +275,7 @@ export default function ChatScreen() {
 
         <ChatInput
           onSend={send}
-          onAttach={() => Alert.alert('Coming soon', 'Sending photos in chat will be available in a later step.')}
+          onAttach={() => comingSoon('Sending photos in chat')}
         />
       </KeyboardAvoidingView>
     </SafeAreaView>

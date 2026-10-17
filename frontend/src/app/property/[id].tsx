@@ -20,8 +20,10 @@ import { openChatForProperty } from '@/features/chat/openChat';
 import { OwnerCard } from '@/features/property/OwnerCard';
 import { PhotoGallery } from '@/features/property/PhotoGallery';
 import { propertyService } from '@/services/propertyService';
+import { session } from '@/services/session';
 import { colors, radius, SCREEN_PADDING, spacing } from '@/theme';
 import type { Property } from '@/types/property';
+import { comingSoon } from '@/utils/comingSoon';
 import { floorLabel, formatBdNumber, formatTaka, plural } from '@/utils/format';
 
 type IoniconName = ComponentProps<typeof Ionicons>['name'];
@@ -37,15 +39,22 @@ export default function PropertyDetailsScreen() {
   const [loading, setLoading] = useState(true);
   const [isFavorite, setIsFavorite] = useState(false);
   const [expanded, setExpanded] = useState(false);
+  /**
+   * The signed-in user owns this listing: Edit / Visit Requests at the bottom,
+   * and no save, report, owner card or tenant address note.
+   */
+  const [isMine, setIsMine] = useState(false);
 
   useEffect(() => {
     (async () => {
-      const [p, favs] = await Promise.all([
+      const [p, favs, me] = await Promise.all([
         propertyService.getById(id),
         propertyService.getFavoriteIds(),
+        session.getUser(),
       ]);
       setProperty(p);
       setIsFavorite(favs.includes(id));
+      setIsMine(!!p && !!me && me.phone === p.owner.phone);
       setLoading(false);
     })();
   }, [id]);
@@ -84,13 +93,13 @@ export default function PropertyDetailsScreen() {
       message: `${property.title} — ${formatTaka(property.monthlyRent)}/month, ${property.areaLabel}.\nbashalagbe://property/${property.id}`,
     });
 
-  const comingSoon = (feature: string) =>
-    Alert.alert('Coming soon', `${feature} will be available in the next step.`);
-
   const openMenu = () =>
     Alert.alert('Listing options', undefined, [
       { text: 'Share listing', onPress: share },
-      { text: 'Report this listing', style: 'destructive', onPress: () => comingSoon('Reporting') },
+      // Owners can't report their own listing.
+      ...(isMine
+        ? []
+        : [{ text: 'Report this listing', style: 'destructive' as const, onPress: () => comingSoon('Reporting') }]),
       { text: 'Cancel', style: 'cancel' },
     ]);
 
@@ -220,14 +229,19 @@ export default function PropertyDetailsScreen() {
             <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
           </Pressable>
 
-          <View style={styles.privacyNote}>
-            <Ionicons name="lock-closed-outline" size={16} color={colors.textSecondary} />
-            <AppText variant="small" color="textSecondary" style={styles.flex}>
-              Exact address is shared by the owner after you contact them or book a visit.
-            </AppText>
-          </View>
+          {/* Tenant-only: the address note and the owner's card. */}
+          {isMine ? null : (
+            <>
+              <View style={styles.privacyNote}>
+                <Ionicons name="lock-closed-outline" size={16} color={colors.textSecondary} />
+                <AppText variant="small" color="textSecondary" style={styles.flex}>
+                  Exact address is shared by the owner after you contact them or book a visit.
+                </AppText>
+              </View>
 
-          <OwnerCard owner={property.owner} onPress={() => comingSoon('Owner profile')} />
+              <OwnerCard owner={property.owner} onPress={() => comingSoon('Owner profile')} />
+            </>
+          )}
         </View>
       </ScrollView>
 
@@ -236,30 +250,53 @@ export default function PropertyDetailsScreen() {
         <CircleButton icon="chevron-back" label="Go back" onPress={goBack} />
         <View style={styles.topRight}>
           <CircleButton icon="share-social-outline" label="Share" onPress={share} />
-          <CircleButton
-            icon={isFavorite ? 'heart' : 'heart-outline'}
-            color={isFavorite ? colors.favorite : colors.text}
-            label={isFavorite ? 'Remove from favorites' : 'Save to favorites'}
-            onPress={toggleFavorite}
-          />
+          {isMine ? null : (
+            <CircleButton
+              icon={isFavorite ? 'heart' : 'heart-outline'}
+              color={isFavorite ? colors.favorite : colors.text}
+              label={isFavorite ? 'Remove from favorites' : 'Save to favorites'}
+              onPress={toggleFavorite}
+            />
+          )}
         </View>
       </View>
 
       <View style={[styles.bottomBar, { paddingBottom: Math.max(insets.bottom, spacing.md) }]}>
-        <ActionButton icon="call" label="Call" flex={1} onPress={callOwner} />
-        <ActionButton
-          icon="chatbubble-ellipses"
-          label="Message"
-          flex={1.25}
-          onPress={() => openChatForProperty(property.id)}
-        />
-        <ActionButton
-          icon="calendar-outline"
-          label="Request Visit"
-          primary
-          flex={1.55}
-          onPress={() => router.push({ pathname: '/contact/[id]', params: { id: property.id } })}
-        />
+        {isMine ? (
+          // The owner's own listing: manage it instead of contacting themselves.
+          <>
+            <ActionButton
+              icon="create-outline"
+              label="Edit"
+              flex={1}
+              onPress={() => router.push({ pathname: '/edit-property/[id]', params: { id: property.id } })}
+            />
+            <ActionButton
+              icon="calendar-outline"
+              label="Visit Requests"
+              primary
+              flex={1.4}
+              onPress={() => router.push('/owner-visits')}
+            />
+          </>
+        ) : (
+          <>
+            <ActionButton icon="call" label="Call" flex={1} onPress={callOwner} />
+            <ActionButton
+              icon="chatbubble-ellipses"
+              label="Message"
+              flex={1.25}
+              onPress={() => openChatForProperty(property.id)}
+            />
+            <ActionButton
+              icon="calendar-outline"
+              label="Request Visit"
+              primary
+              flex={1.55}
+              onPress={() => router.push({ pathname: '/contact/[id]', params: { id: property.id } })}
+            />
+          </>
+        )}
       </View>
     </View>
   );
@@ -294,7 +331,7 @@ function ActionButton({
   label: string;
   onPress: () => void;
   primary?: boolean;
-  /** Relative width, so "Request Visit" gets the most room. */
+  /** Relative width, so the main button gets the most room. */
   flex: number;
 }) {
   const color = primary ? colors.white : colors.primaryDeep;
