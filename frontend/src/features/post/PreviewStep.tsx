@@ -86,7 +86,7 @@ export function PreviewStep({ draft: d, onEdit, editing }: Props) {
       <Section title="Property Details" rows={details} onEdit={() => onEdit(1)} />
       <Section title="Rent Terms" rows={terms} onEdit={() => onEdit(1)} />
       <Section
-        title="Amenities"
+        title="Facilities"
         rows={[['Included', amenities.length ? amenities.join(', ') : 'None selected']]}
         onEdit={() => onEdit(2)}
       />

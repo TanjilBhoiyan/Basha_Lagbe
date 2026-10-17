@@ -255,7 +255,7 @@ export class PropertyFieldsDto {
   availableFrom: string;
 
   @IsString()
-  @MinLength(30)
+  @MinLength(10)
   @MaxLength(1000)
   description: string;
 }

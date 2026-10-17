@@ -120,7 +120,7 @@ export function PhotosStep({ draft, errors, onChange }: Props) {
         ) : null}
       </View>
 
-      <GroupTitle icon="star-four-points-outline">Amenities</GroupTitle>
+      <GroupTitle icon="star-four-points-outline">Facilities</GroupTitle>
       <View style={styles.amenities}>
         {AMENITY_OPTIONS.map((a) => (
           <CheckTile

@@ -5,7 +5,7 @@ import { floorLabel } from '@/utils/format';
 export const TITLE_MAX = 100;
 export const ADDRESS_MAX = 200;
 export const AREA_MAX = 60;
-export const DESCRIPTION_MIN = 30;
+export const DESCRIPTION_MIN = 10;
 export const DESCRIPTION_MAX = 1000;
 export const RENT_MIN = 1000;
 export const RENT_MAX = 1000000;

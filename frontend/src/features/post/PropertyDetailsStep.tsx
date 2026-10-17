@@ -121,18 +121,29 @@ export function PropertyDetailsStep({ draft, errors, onChange }: Props) {
         </View>
       ) : null}
 
-      <View>
-        <FieldLabel>Size (Sq. Ft.)</FieldLabel>
-        <Input
-          value={draft.sizeSqft === null ? '' : String(draft.sizeSqft)}
-          onChangeText={(t) => onChange({ sizeSqft: toNumber(t, 6) })}
-          placeholder="e.g. 1200"
-          keyboardType="number-pad"
-          prefix={<FieldIcon name="floor-plan" />}
-          suffix={<AppText color="textMuted">sqft</AppText>}
-          accessibilityLabel="Size in square feet"
-          error={errors.sizeSqft}
-        />
+      <View style={styles.row}>
+        <View style={styles.flex}>
+          <FieldLabel>Size (Sq. Ft.)</FieldLabel>
+          <Input
+            value={draft.sizeSqft === null ? '' : String(draft.sizeSqft)}
+            onChangeText={(t) => onChange({ sizeSqft: toNumber(t, 6) })}
+            placeholder="e.g. 1200"
+            keyboardType="number-pad"
+            prefix={<FieldIcon name="floor-plan" />}
+            accessibilityLabel="Size in square feet"
+            error={errors.sizeSqft}
+          />
+        </View>
+        <View style={styles.flex}>
+          <FieldLabel>Facing</FieldLabel>
+          <SelectField
+            icon="compass-outline"
+            placeholder="Optional"
+            value={FACING_OPTIONS.find((o) => o.value === draft.facing)?.label}
+            onPress={() => setSheet('facing')}
+            accessibilityLabel="Facing"
+          />
+        </View>
       </View>
 
       <View style={styles.row}>
@@ -158,17 +169,6 @@ export function PropertyDetailsStep({ draft, errors, onChange }: Props) {
             accessibilityLabel="Total floors in the building"
           />
         </View>
-      </View>
-
-      <View>
-        <FieldLabel>Facing</FieldLabel>
-        <SelectField
-          icon="compass-outline"
-          placeholder="Select facing (optional)"
-          value={FACING_OPTIONS.find((o) => o.value === draft.facing)?.label}
-          onPress={() => setSheet('facing')}
-          accessibilityLabel="Facing"
-        />
       </View>
 
       <GroupTitle icon="sofa-outline">More Details</GroupTitle>

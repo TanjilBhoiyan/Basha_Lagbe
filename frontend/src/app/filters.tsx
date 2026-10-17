@@ -213,7 +213,7 @@ export default function FiltersScreen() {
           </View>
         </FilterSection>
 
-        <FilterSection title="Amenities">
+        <FilterSection title="Facilities">
           <View style={styles.wrapRow}>
             {AMENITY_OPTIONS.map((a) => (
               <CheckTile

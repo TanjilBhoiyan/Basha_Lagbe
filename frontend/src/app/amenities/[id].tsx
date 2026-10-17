@@ -100,7 +100,7 @@ export default function AmenitiesScreen() {
           <Ionicons name="arrow-back" size={26} color={colors.text} />
         </Pressable>
         <AppText style={styles.title} accessibilityRole="header">
-          Amenities & Info
+          Facilities & Info
         </AppText>
       </View>
 
@@ -119,7 +119,7 @@ export default function AmenitiesScreen() {
 
           <View style={styles.card}>
             <View style={styles.cardHeader}>
-              <AppText variant="h3">Amenities</AppText>
+              <AppText variant="h3">Facilities</AppText>
               <AppText variant="caption" color="textSecondary">
                 {property.amenities.length} of {AMENITY_OPTIONS.length} available
               </AppText>

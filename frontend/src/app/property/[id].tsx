@@ -206,13 +206,13 @@ export default function PropertyDetailsScreen() {
             onPress={openInfo}
             style={({ pressed }) => [styles.infoLink, pressed && styles.pressed]}
             accessibilityRole="button"
-            accessibilityLabel="See amenities and rental information"
+            accessibilityLabel="See facilities and rental information"
           >
             <View style={styles.infoLinkIcon}>
               <MaterialCommunityIcons name="file-document-outline" size={22} color={colors.primaryDeep} />
             </View>
             <View style={styles.flex}>
-              <AppText variant="bodyBold">Amenities & Rental Info</AppText>
+              <AppText variant="bodyBold">Facilities & Rental Info</AppText>
               <AppText variant="caption" color="textSecondary">
                 Deposit, advance, service charge, minimum stay
               </AppText>

@@ -30,6 +30,7 @@ import {
 import { PhotosStep } from './PhotosStep';
 import { PreviewStep } from './PreviewStep';
 import { PropertyDetailsStep } from './PropertyDetailsStep';
+import { PublishedModal } from './PublishedModal';
 import { StepIndicator } from './StepIndicator';
 
 const STEPS = ['Basic Info', 'Property\nDetails', 'Photos', 'Preview'];
@@ -53,6 +54,8 @@ export function PropertyFormScreen({ editId }: Props) {
   const [restored, setRestored] = useState(false);
   /** "Uploading photos 2/5…" while submitting; null when idle. */
   const [submitting, setSubmitting] = useState<string | null>(null);
+  /** The listing that was just posted or saved (shows the success popup). */
+  const [done, setDone] = useState<{ id: string; edited: boolean } | null>(null);
   /** Editing: the listing couldn't be loaded. */
   const [notFound, setNotFound] = useState(false);
 
@@ -116,8 +119,8 @@ export function PropertyFormScreen({ editId }: Props) {
       return;
     }
     setSubmitting(editing ? 'Saving…' : 'Submitting…');
-    const onProgress = (done: number, total: number) =>
-      setSubmitting(done < total ? `Uploading photos ${done + 1}/${total}…` : 'Saving listing…');
+    const onProgress = (uploaded: number, total: number) =>
+      setSubmitting(uploaded < total ? `Uploading photos ${uploaded + 1}/${total}…` : 'Saving listing…');
     const result = editId
       ? await propertyPostService.update(editId, draft, onProgress)
       : await propertyPostService.submit(draft, onProgress);
@@ -127,16 +130,28 @@ export function PropertyFormScreen({ editId }: Props) {
       return;
     }
     if (editing) {
-      Alert.alert('Changes saved', 'Your listing has been updated.');
-      leave();
+      setDone({ id: editId!, edited: true });
       return;
     }
     await postDraftService.clear();
     setDraft(EMPTY_DRAFT);
     setRestored(false);
     goToStep(0);
-    Alert.alert('Property published', 'Your property is now live. Tenants can find it right away.');
-    router.replace('/dashboard');
+    setDone({ id: result.data.id, edited: false });
+  };
+
+  const viewListing = () => {
+    if (!done) return;
+    const { id } = done;
+    setDone(null);
+    router.replace({ pathname: '/property/[id]', params: { id } });
+  };
+
+  const closeDone = () => {
+    const wasEdit = done?.edited;
+    setDone(null);
+    if (wasEdit) leave();
+    else router.replace('/dashboard');
   };
 
   const next = () => {
@@ -264,6 +279,13 @@ export function PropertyFormScreen({ editId }: Props) {
           />
         </View>
       </KeyboardAvoidingView>
+
+      <PublishedModal
+        visible={!!done}
+        edited={!!done?.edited}
+        onViewListing={viewListing}
+        onClose={closeDone}
+      />
     </SafeAreaView>
   );
 }
