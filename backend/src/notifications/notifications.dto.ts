@@ -1,4 +1,4 @@
-import { IsString, Matches, MaxLength } from 'class-validator';
+import { IsOptional, IsString, IsUUID, Matches, MaxLength } from 'class-validator';
 
 /** Expo push token from the phone, e.g. "ExponentPushToken[xxxxxxxxxxxxxxxxxxxxxx]". */
 const EXPO_PUSH_TOKEN = /^Expo(nent)?PushToken\[[^\]]+\]$/;
@@ -9,4 +9,11 @@ export class PushTokenDto {
   @MaxLength(200)
   @Matches(EXPO_PUSH_TOKEN, { message: 'Invalid push token.' })
   token: string;
+}
+
+/** GET /notifications?before=<id of the last item already shown> */
+export class ListNotificationsQuery {
+  @IsOptional()
+  @IsUUID()
+  before?: string;
 }

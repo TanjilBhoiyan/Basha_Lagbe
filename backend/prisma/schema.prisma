@@ -43,6 +43,8 @@ model User {
   messages         Message[]
   /// Phones that get this user's notifications
   pushTokens       PushToken[]
+  /// The in-app notification list (bell icon)
+  notifications    Notification[]
 
   @@map("users")
 }
@@ -83,6 +85,25 @@ model PushToken {
 
   @@index([userId])
   @@map("push_tokens")
+}
+
+/// The in-app notification list (bell icon). Every push is saved here too, so nothing is lost.
+model Notification {
+  id        String    @id @default(uuid(7)) @db.Uuid
+  userId    String    @map("user_id") @db.Uuid
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title     String
+  body      String
+  /// What the app opens on tap, e.g. { "screen": "visits", "visitId": "..." }
+  data      Json      @default("{}")
+  /// Set when the user has seen it
+  readAt    DateTime? @map("read_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  @@index([userId, createdAt])
+  /// Fast unread count for the bell
+  @@index([userId, readAt])
+  @@map("notifications")
 }
 
 // ─── Locations & properties ─────────────────────────────

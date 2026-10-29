@@ -3,9 +3,12 @@ import Constants from 'expo-constants';
 import * as Notifications from 'expo-notifications';
 import { router } from 'expo-router';
 import { useEffect, useRef } from 'react';
-import { Alert, Platform } from 'react-native';
+import { Platform } from 'react-native';
+
+import { answerListingReminder, openNotificationTarget } from '@/features/notifications/notificationActions';
 
 import { apiRequest } from './apiClient';
+import { notificationService, type NotificationData } from './notificationService';
 import { session } from './session';
 
 /** The Expo push token we registered on the server, so logout can remove it again. */
@@ -16,9 +19,6 @@ const REMINDER_CATEGORY = 'listing-reminder';
 const ACTION_STILL_AVAILABLE = 'still-available';
 const ACTION_RENTED = 'rented';
 
-/** What the backend puts in `data`. */
-type PushData = { screen?: string; propertyId?: string; visitId?: string };
-
 // Show notifications as a banner even while the app is open.
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -28,12 +28,6 @@ Notifications.setNotificationHandler({
     shouldSetBadge: false,
   }),
 });
-
-/** "2026-11-28" -> "28 Nov" */
-function shortDay(isoDate?: string) {
-  if (!isoDate) return 'the next 30 days';
-  return new Date(`${isoDate}T00:00:00`).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
-}
 
 /**
  * Android channel (pop-up with sound) and the "Still available / Rented" buttons.
@@ -91,9 +85,9 @@ export async function unregisterPush(): Promise<void> {
   }
 }
 
-/** A notification (or one of its buttons) was tapped. */
+/** A push (or one of its buttons) was tapped. */
 async function handleResponse(response: Notifications.NotificationResponse) {
-  const data = (response.notification.request.content.data ?? {}) as PushData;
+  const data = (response.notification.request.content.data ?? {}) as NotificationData;
   const action = response.actionIdentifier;
 
   // Android keeps a notification after a button press: remove it ourselves.
@@ -101,36 +95,17 @@ async function handleResponse(response: Notifications.NotificationResponse) {
     void Notifications.dismissNotificationAsync(response.notification.request.identifier);
   }
 
-  if (data.propertyId && action === ACTION_STILL_AVAILABLE) {
-    const result = await apiRequest<{ hidesOn?: string }>(`/properties/${data.propertyId}/confirm`, {
-      method: 'POST',
-      auth: true,
-    });
+  if (data.propertyId && (action === ACTION_STILL_AVAILABLE || action === ACTION_RENTED)) {
     router.push('/dashboard');
-    if (result.ok) Alert.alert('Thanks!', `Your listing stays visible until ${shortDay(result.data.hidesOn)}.`);
-    else Alert.alert('Could not update', result.error);
+    await answerListingReminder(data.propertyId, action === ACTION_RENTED ? 'rented' : 'available');
     return;
   }
-
-  if (data.propertyId && action === ACTION_RENTED) {
-    const result = await apiRequest<unknown>(`/properties/${data.propertyId}/status`, {
-      method: 'PATCH',
-      body: { status: 'rented' },
-      auth: true,
-    });
-    router.push('/dashboard');
-    if (result.ok) Alert.alert('Marked as rented', 'Tenants will no longer see this listing.');
-    else Alert.alert('Could not update', result.error);
-    return;
-  }
-
-  if (data.screen === 'visits') router.push('/owner-visits');
-  else if (data.screen === 'listing-reminder' || data.screen === 'my-listings') router.push('/dashboard');
+  openNotificationTarget(data);
 }
 
 /**
  * Root layout: sets up notifications, registers this phone (if logged in),
- * and handles taps, including the one that opened a closed app.
+ * keeps the bell's red dot fresh, and handles taps, including the one that opened a closed app.
  */
 export function usePushNotifications() {
   const handled = useRef(new Set<string>());
@@ -155,9 +130,12 @@ export function usePushNotifications() {
       void Notifications.clearLastNotificationResponseAsync();
     });
 
-    const subscription = Notifications.addNotificationResponseReceivedListener(handleOnce);
+    const tapped = Notifications.addNotificationResponseReceivedListener(handleOnce);
+    // A push arrived while the app is open: it is already in the list, so update the bell.
+    const received = Notifications.addNotificationReceivedListener(() => notificationService.notifyChanged());
     return () => {
-      subscription.remove();
+      tapped.remove();
+      received.remove();
       if (coldStartTimer) clearTimeout(coldStartTimer);
     };
   }, []);

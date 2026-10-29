@@ -26,6 +26,7 @@ import {
   priceChipLabel,
 } from '@/features/home/quickFilters';
 import { locationService } from '@/services/locationService';
+import { notificationService } from '@/services/notificationService';
 import { propertyService } from '@/services/propertyService';
 import { colors, SCREEN_PADDING, spacing } from '@/theme';
 import { locationLabel, NEAR_RADIUS_KM, type Location } from '@/types/location';
@@ -44,6 +45,7 @@ export default function HomeScreen() {
   const [favorites, setFavorites] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
 
   // Re-read the selected location whenever Home comes back into focus
   // (e.g. after changing it on the Select Location screen).
@@ -52,7 +54,14 @@ export default function HomeScreen() {
     useCallback(() => {
       locationService.getSelected().then(setLocation);
       propertyService.getFavoriteIds().then(setFavorites);
+      notificationService.unreadCount().then(setUnreadCount);
     }, []),
+  );
+
+  // A new push (or "mark read" on the Notifications page) updates the bell's red dot at once.
+  useEffect(
+    () => notificationService.onChange(() => notificationService.unreadCount().then(setUnreadCount)),
+    [],
   );
 
   useEffect(() => {
@@ -102,8 +111,8 @@ export default function HomeScreen() {
           <HomeHeader
             locationText={location ? locationLabel(location) : 'Select location'}
             onLocationPress={() => router.push('/select-location')}
-            onNotificationsPress={() => comingSoon('Notifications')}
-            hasUnreadNotifications
+            onNotificationsPress={() => router.push('/notifications')}
+            hasUnreadNotifications={unreadCount > 0}
           />
 
           <SearchField
