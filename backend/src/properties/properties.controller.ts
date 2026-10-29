@@ -77,6 +77,13 @@ export class PropertiesController {
     return this.properties.setStatus(user.sub, id, dto.status);
   }
 
+  /** POST /properties/:id/confirm — owner: "Still available" (live) or "Renew" (hidden): a fresh 30-day clock */
+  @Post(':id/confirm')
+  @UseGuards(JwtAuthGuard)
+  confirm(@CurrentUser() user: JwtPayload, @Param('id', new ParseUUIDPipe()) id: string) {
+    return this.properties.confirm(user.sub, id);
+  }
+
   /** DELETE /properties/:id — owner only */
   @Delete(':id')
   @UseGuards(JwtAuthGuard)

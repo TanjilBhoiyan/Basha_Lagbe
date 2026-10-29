@@ -2,6 +2,7 @@ import { router } from 'expo-router';
 import { Alert, Linking } from 'react-native';
 
 import { APP_CONFIG } from '@/config/app';
+import { unregisterPush } from '@/services/pushNotifications';
 import { session } from '@/services/session';
 import { comingSoon } from '@/utils/comingSoon';
 
@@ -15,6 +16,8 @@ export function confirmLogout() {
       text: 'Log out',
       style: 'destructive',
       onPress: async () => {
+        // First, while still logged in: this phone stops getting this account's notifications.
+        await unregisterPush();
         await session.clear();
         router.replace('/login');
       },

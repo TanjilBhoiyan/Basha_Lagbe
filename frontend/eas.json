@@ -1,0 +1,8 @@
+{
+  "build": {
+    "development": {
+      "distribution": "internal"
+    },
+    "production": {}
+  }
+}

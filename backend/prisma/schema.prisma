@@ -41,6 +41,8 @@ model User {
   tenantChats      Conversation[] @relation("ChatTenant")
   ownerChats       Conversation[] @relation("ChatOwner")
   messages         Message[]
+  /// Phones that get this user's notifications
+  pushTokens       PushToken[]
 
   @@map("users")
 }
@@ -65,6 +67,22 @@ model OtpCode {
 
   @@index([phone, purpose])
   @@map("otp_codes")
+}
+
+// ─── Notifications ──────────────────────────────────────
+
+/// One row per phone that allowed notifications (a user can have more than one phone).
+model PushToken {
+  id        String   @id @default(uuid(7)) @db.Uuid
+  /// Expo push token, e.g. "ExponentPushToken[xxxx]"
+  token     String   @unique
+  userId    String   @map("user_id") @db.Uuid
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([userId])
+  @@map("push_tokens")
 }
 
 // ─── Locations & properties ─────────────────────────────
@@ -142,6 +160,7 @@ enum ListingStatus {
   published
   rented
   rejected
+  expired // owner did not confirm in time: hidden until they renew
 }
 
 model Property {
@@ -154,6 +173,10 @@ model Property {
   description           String
   type                  PropertyType
   status                ListingStatus   @default(pending)
+  /// When the 30-day clock last started: posting, "Still available" or Renew
+  confirmedAt           DateTime        @default(now()) @map("confirmed_at")
+  /// "Still available?" reminders sent since confirmedAt (0 to MAX_REMINDERS)
+  remindersSent         Int             @default(0) @map("reminders_sent")
   /// Public area text, e.g. "Mirpur 10, Dhaka". The exact address is never shown publicly.
   areaLabel             String          @map("area_label")
   /// Exact address (house, road). Never shown publicly.
@@ -191,6 +214,8 @@ model Property {
 
   @@index([status, locationId])
   @@index([status, monthlyRent])
+  /// The daily job finds listings that need a reminder or should expire
+  @@index([status, confirmedAt])
   @@map("properties")
 }
 

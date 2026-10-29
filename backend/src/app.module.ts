@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
+import { ScheduleModule } from '@nestjs/schedule';
 
 import { AppController } from './app.controller.js';
 import { AppService } from './app.service.js';
@@ -9,6 +10,7 @@ import { FavoritesModule } from './favorites/favorites.module.js';
 import { GeocodeModule } from './geocode/geocode.module.js';
 import { HealthModule } from './health/health.module.js';
 import { LocationsModule } from './locations/locations.module.js';
+import { NotificationsModule } from './notifications/notifications.module.js';
 import { PlacesModule } from './places/places.module.js';
 import { PrismaModule } from './prisma/prisma.module.js';
 import { PropertiesModule } from './properties/properties.module.js';
@@ -21,8 +23,11 @@ import { VisitsModule } from './visits/visits.module.js';
   imports: [
     // Loads backend/.env into process.env for the whole app.
     ConfigModule.forRoot({ isGlobal: true }),
+    // Daily jobs (e.g. listing reminders / expiry)
+    ScheduleModule.forRoot(),
     PrismaModule,
     StorageModule,
+    NotificationsModule,
     SmsModule,
     HealthModule,
     AuthModule,

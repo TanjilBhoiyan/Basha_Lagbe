@@ -15,7 +15,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { AppText, Button, EmptyState } from '@/components/ui';
 import { hasDraftContent, type PropertyDraft } from '@/features/post/draft';
-import { LISTING_STATUS_STYLE } from '@/features/owner/listingStatus';
+import { LISTING_STATUS_STYLE, shortDate } from '@/features/owner/listingStatus';
 import { OwnerListingCard } from '@/features/owner/OwnerListingCard';
 import { StatTile } from '@/features/owner/StatTile';
 import { ownerListingService } from '@/services/ownerListingService';
@@ -32,6 +32,7 @@ const FILTER_LABEL: Record<Filter, string> = {
   published: 'Published',
   pending: 'Pending',
   rented: 'Rented',
+  expired: 'Hidden',
 };
 
 export default function OwnerDashboardScreen() {
@@ -80,7 +81,25 @@ export default function OwnerDashboardScreen() {
       Alert.alert('Could not update', result.error);
       return;
     }
-    setListings((list) => list.map((l) => (l.propertyId === listing.propertyId ? { ...l, status } : l)));
+    await load(); // also refreshes the "Visible until" date
+  };
+
+  /** "Still available?" (live) or "Renew" (hidden): live for another 30 days. */
+  const confirmListing = async (listing: OwnerListing, title: string) => {
+    const result = await ownerListingService.confirm(listing.propertyId);
+    if (!result.ok) {
+      Alert.alert('Could not update', result.error);
+      return;
+    }
+    const { hidesOn } = result.data;
+    setListings((list) =>
+      list.map((l) => (l.propertyId === listing.propertyId ? { ...l, status: 'published', hidesOn } : l)),
+    );
+    const until = hidesOn ? ` until ${shortDate(hidesOn)}` : '';
+    Alert.alert(
+      listing.status === 'expired' ? 'Listing is live again' : 'Thanks!',
+      `Tenants can see "${title}"${until}.`,
+    );
   };
 
   const confirmDelete = (listing: OwnerListing, title: string) =>
@@ -111,10 +130,19 @@ export default function OwnerDashboardScreen() {
       options.push({ text: 'Mark as rented', onPress: () => changeStatus(listing, 'rented') });
     } else if (listing.status === 'rented') {
       options.push({ text: 'Mark as available again', onPress: () => changeStatus(listing, 'published') });
+    } else if (listing.status === 'expired') {
+      options.push({ text: 'Renew listing', onPress: () => confirmListing(listing, property.title) });
+      options.push({ text: 'Mark as rented', onPress: () => changeStatus(listing, 'rented') });
     }
     options.push({ text: 'Delete listing', style: 'destructive', onPress: () => confirmDelete(listing, property.title) });
     options.push({ text: 'Cancel', style: 'cancel' });
-    Alert.alert(property.title, listing.status === 'pending' ? 'Waiting for review by our team.' : undefined, options);
+    const note =
+      listing.status === 'pending'
+        ? 'Waiting for review by our team.'
+        : listing.status === 'expired'
+          ? 'Hidden from tenants because it was not confirmed in time.'
+          : undefined;
+    Alert.alert(property.title, note, options);
   };
 
   const tiles: { key: Filter; label: string; icon: 'home' | 'file-document' | 'clock-outline' | 'key-variant'; color: string; background: string }[] = [
@@ -245,8 +273,10 @@ export default function OwnerDashboardScreen() {
               <OwnerListingCard
                 property={property}
                 status={item.status}
+                hidesOn={item.hidesOn}
                 onView={() => view(property.id)}
                 onEdit={() => openEditMenu(item, property)}
+                onConfirm={() => confirmListing(item, property.title)}
               />
             );
           }}

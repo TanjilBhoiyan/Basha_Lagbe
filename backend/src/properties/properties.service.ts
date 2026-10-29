@@ -8,6 +8,7 @@ import type { Amenity, Facing, Furnishing, Location, Prisma, TenantType } from '
 import { PrismaService } from '../prisma/prisma.service.js';
 import { distanceKm } from '../common/geo.js';
 import { StorageService } from '../storage/storage.service.js';
+import { ListingExpiryService } from './listing-expiry.service.js';
 import {
   type CreatePropertyDto,
   type ListPropertiesQuery,
@@ -28,6 +29,9 @@ const areaId = (name: string, city: string) =>
 /** API item with how far it is from the searched point (1 decimal, km). */
 export type NearbyProperty = ApiProperty & { distanceKm?: number };
 
+/** The owner's listing card: also the day it gets hidden unless confirmed (live listings only). */
+export type MyProperty = ApiProperty & { hidesOn?: string };
+
 /** "Any" when undefined; 4 means "4 or more". */
 const countFilter = (n?: number) => (n === undefined ? undefined : n >= 4 ? { gte: 4 } : n);
 
@@ -37,6 +41,7 @@ export class PropertiesService {
     private readonly prisma: PrismaService,
     private readonly geocode: GeocodeService,
     private readonly storage: StorageService,
+    private readonly expiry: ListingExpiryService,
   ) {}
 
   async list(query: ListPropertiesQuery): Promise<{ items: NearbyProperty[]; total: number; page: number; limit: number }> {
@@ -98,14 +103,17 @@ export class PropertiesService {
     return toApiProperty(property);
   }
 
-  /** Owner: all my listings (any status), newest first. */
-  async mine(ownerId: string): Promise<ApiProperty[]> {
+  /** Owner: all my listings (any status), newest first. Live ones say when they get hidden. */
+  async mine(ownerId: string): Promise<MyProperty[]> {
     const properties = await this.prisma.property.findMany({
       where: { ownerId },
       include: PROPERTY_INCLUDE,
       orderBy: { createdAt: 'desc' },
     });
-    return properties.map(toApiProperty);
+    return properties.map((p) => ({
+      ...toApiProperty(p),
+      hidesOn: p.status === 'published' ? this.expiry.hidesOn(p.confirmedAt) : undefined,
+    }));
   }
 
   /** Owner: one of my listings with its private address (for the Edit form). */
@@ -137,7 +145,8 @@ export class PropertiesService {
 
   /**
    * Owner: edit my listing. Photos are replaced by the new list (in order);
-   * each one must be newly uploaded or already belong to this listing. Status stays the same.
+   * each one must be newly uploaded or already belong to this listing.
+   * Status and the 30-day clock (confirmedAt) stay the same.
    */
   async update(ownerId: string, id: string, dto: UpdatePropertyDto): Promise<ApiProperty> {
     const existing = await this.prisma.property.findFirst({ where: { id, ownerId }, include: { images: true } });
@@ -211,18 +220,43 @@ export class PropertiesService {
     return near?.city;
   }
 
-  /** Owner: mark a live listing as rented, or a rented one as available again. */
+  /**
+   * Owner: "Still available" (live listing) or "Renew" (hidden listing).
+   * Either way the listing is live with a fresh 30-day clock and no reminders sent yet.
+   */
+  async confirm(ownerId: string, id: string): Promise<MyProperty> {
+    const property = await this.prisma.property.findFirst({ where: { id, ownerId } });
+    if (!property) throw new NotFoundException('Listing not found.');
+    if (property.status !== 'published' && property.status !== 'expired') {
+      throw new BadRequestException(
+        property.status === 'rented'
+          ? 'This listing is marked as rented. Mark it as available instead.'
+          : `A ${property.status} listing can't be renewed.`,
+      );
+    }
+    const updated = await this.prisma.property.update({
+      where: { id },
+      data: { status: 'published', confirmedAt: new Date(), remindersSent: 0 },
+      include: PROPERTY_INCLUDE,
+    });
+    return { ...toApiProperty(updated), hidesOn: this.expiry.hidesOn(updated.confirmedAt) };
+  }
+
+  /**
+   * Owner: mark a live (or hidden) listing as rented, or a rented one as available again.
+   * Available again = a fresh 30-day clock (no reminders sent yet).
+   */
   async setStatus(ownerId: string, id: string, status: 'published' | 'rented'): Promise<ApiProperty> {
     const property = await this.prisma.property.findFirst({ where: { id, ownerId } });
     if (!property) throw new NotFoundException('Listing not found.');
-    const allowed = (property.status === 'published' && status === 'rented') ||
+    const allowed = ((property.status === 'published' || property.status === 'expired') && status === 'rented') ||
       (property.status === 'rented' && status === 'published');
     if (!allowed) {
       throw new BadRequestException(`A ${property.status} listing can't be changed to ${status}.`);
     }
     const updated = await this.prisma.property.update({
       where: { id },
-      data: { status },
+      data: status === 'published' ? { status, confirmedAt: new Date(), remindersSent: 0 } : { status },
       include: PROPERTY_INCLUDE,
     });
     return toApiProperty(updated);

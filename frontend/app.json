@@ -13,6 +13,7 @@
     },
     "android": {
       "package": "com.basalagbe.app",
+      "googleServicesFile": "./google-services.json",
       "adaptiveIcon": {
         "backgroundColor": "#FFFFFF",
         "foregroundImage": "./assets/android-icon-foreground.png",
@@ -47,10 +48,24 @@
           "photosPermission": "Basa Lagbe needs access to your photos to add pictures of your property and your profile.",
           "cameraPermission": "Basa Lagbe uses the camera to take your profile photo."
         }
+      ],
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/android-icon-monochrome.png",
+          "color": "#16A34A"
+        }
       ]
     ],
     "experiments": {
       "typedRoutes": true
-    }
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "fc561358-1ad7-491e-8d83-71b146f0c207"
+      }
+    },
+    "owner": "tanjilbhoiyan"
   }
 }

@@ -1,6 +1,7 @@
 import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 
 import type { Visit } from '../generated/prisma/client.js';
+import { NotificationsService } from '../notifications/notifications.service.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import type { CreateVisitDto } from './visits.dto.js';
 
@@ -11,6 +12,14 @@ const MAX_DAYS_AHEAD = 30;
 /** Visit dates/times are Bangladesh local time (UTC+6, no daylight saving). */
 const slotStart = (date: string, time: string) => new Date(`${date}T${time}:00+06:00`);
 const dateOnly = (d: Date) => d.toISOString().slice(0, 10);
+
+/** "2026-11-05" + "14:00" -> "5 Nov at 2:00 PM" (for notifications). */
+function slotLabel(date: string, time: string) {
+  const day = new Date(`${date}T00:00:00Z`).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', timeZone: 'UTC' });
+  const [h = 0, m = 0] = time.split(':').map(Number);
+  const hour12 = h % 12 || 12;
+  return `${day} at ${hour12}:${String(m).padStart(2, '0')} ${h < 12 ? 'AM' : 'PM'}`;
+}
 
 /** Same shape as the app's VisitRequest type. */
 export function toApiVisit(v: Visit) {
@@ -35,7 +44,10 @@ function isActive(v: Visit, now = Date.now()) {
 
 @Injectable()
 export class VisitsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly notifications: NotificationsService,
+  ) {}
 
   /** Tenant: my visit requests, newest first. */
   async mine(tenantId: string, propertyId?: string) {
@@ -46,11 +58,14 @@ export class VisitsService {
     return visits.map(toApiVisit);
   }
 
-  /** Tenant: request a visit. One open request per property — a new one replaces a pending one. */
+  /**
+   * Tenant: request a visit. One open request per property — a new one replaces a pending one.
+   * The owner gets a push notification (the tenant is not notified about the owner's answer).
+   */
   async request(tenantId: string, dto: CreateVisitDto) {
     const property = await this.prisma.property.findFirst({
       where: { id: dto.propertyId, status: 'published' },
-      select: { ownerId: true },
+      select: { ownerId: true, title: true },
     });
     if (!property) throw new NotFoundException('This listing is no longer available.');
     if (property.ownerId === tenantId) {
@@ -84,7 +99,9 @@ export class VisitsService {
     const visit = open
       ? await this.prisma.visit.update({ where: { id: open.id }, data })
       : await this.prisma.visit.create({ data: { ...data, tenantId, propertyId: dto.propertyId } });
-    // TODO: notify the owner (push notification) once notifications are added.
+
+    // Not awaited: the tenant's request is saved even if the notification is slow or fails.
+    void this.notifyOwner(property.ownerId, tenantId, property.title, dto.date, dto.time, Boolean(open), visit.id);
     return toApiVisit(visit);
   }
 
@@ -129,7 +146,25 @@ export class VisitsService {
       where: { id: visitId },
       data: { status: decision === 'confirm' ? 'confirmed' : 'declined' },
     });
-    // TODO: notify the tenant (push notification).
     return toApiVisit(updated);
+  }
+
+  /** "Rahim wants to see "2 bed flat" on 5 Nov at 4:00 PM." to every phone of the owner. */
+  private async notifyOwner(
+    ownerId: string,
+    tenantId: string,
+    title: string,
+    date: string,
+    time: string,
+    changed: boolean,
+    visitId: string,
+  ) {
+    const tenant = await this.prisma.user.findUnique({ where: { id: tenantId }, select: { fullName: true } });
+    const name = tenant?.fullName ?? 'Someone';
+    await this.notifications.sendToUser(ownerId, {
+      title: changed ? 'Visit request changed' : 'New visit request',
+      body: `${name} wants to see "${title}" on ${slotLabel(date, time)}.`,
+      data: { screen: 'visits', visitId },
+    });
   }
 }

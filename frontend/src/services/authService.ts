@@ -8,6 +8,7 @@ import type { LoginMethod, OtpPurpose, Result, User } from '@/types/auth';
 import { normalizeBdPhone } from '@/utils/validation';
 
 import { apiRequest } from './apiClient';
+import { registerForPush } from './pushNotifications';
 import { session } from './session';
 
 /** Shown under the OTP boxes in development builds only. */
@@ -25,6 +26,8 @@ let resetToken: string | null = null;
 
 async function startSession(data: AuthResponse): Promise<User> {
   await session.saveToken(data.accessToken);
+  // Not awaited: login goes on even if the permission prompt or the server call is slow.
+  void registerForPush();
   return data.user;
 }
 

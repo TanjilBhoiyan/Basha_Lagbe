@@ -5,11 +5,13 @@ import type { Property } from '@/types/property';
 
 import { apiImage, apiRequest } from './apiClient';
 
-/** GET /properties/mine returns full properties plus their status and post date. */
+/** GET /properties/mine returns full properties plus their status, post date and hide date. */
 type ApiMyProperty = Omit<Property, 'images'> & {
   images: string[];
   status: ListingStatus | 'rejected';
   createdAt: string;
+  /** Live listings only: "2026-11-28" */
+  hidesOn?: string;
 };
 
 export type MyListings = {
@@ -26,9 +28,9 @@ export const ownerListingService = {
     const empty: MyListings = { listings: [], properties: {} };
     if (!result.ok) return empty;
 
-    return result.data.reduce<MyListings>((acc, { status, createdAt, images, ...p }) => {
+    return result.data.reduce<MyListings>((acc, { status, createdAt, hidesOn, images, ...p }) => {
       if (status === 'rejected') return acc;
-      acc.listings.push({ propertyId: p.id, status, postedAt: createdAt });
+      acc.listings.push({ propertyId: p.id, status, postedAt: createdAt, hidesOn });
       acc.properties[p.id] = { ...p, images: images.map(apiImage) };
       return acc;
     }, empty);
@@ -53,6 +55,15 @@ export const ownerListingService = {
       auth: true,
     });
     return result.ok ? { ok: true, data: null } : result;
+  },
+
+  /** "Still available" (live) or "Renew" (hidden): live again for another 30 days. Returns the new hide date. */
+  async confirm(propertyId: string): Promise<Result<{ hidesOn?: string }>> {
+    const result = await apiRequest<{ hidesOn?: string }>(`/properties/${encodeURIComponent(propertyId)}/confirm`, {
+      method: 'POST',
+      auth: true,
+    });
+    return result.ok ? { ok: true, data: { hidesOn: result.data.hidesOn } } : result;
   },
 
   async remove(propertyId: string): Promise<Result<null>> {

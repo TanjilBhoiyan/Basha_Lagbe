@@ -8,23 +8,32 @@ import { colors, radius, spacing } from '@/theme';
 import type { ListingStatus } from '@/types/listing';
 import type { Property } from '@/types/property';
 import { formatTaka } from '@/utils/format';
-import { LISTING_STATUS_STYLE } from './listingStatus';
+import { LISTING_STATUS_STYLE, shortDate } from './listingStatus';
 
 type Props = {
   property: Property;
   status: ListingStatus;
+  /** Live listings: the day it gets hidden unless confirmed ("2026-11-28"). */
+  hidesOn?: string;
   onView: () => void;
   onEdit: () => void;
+  /** "Still available?" on a live listing, "Renew" on a hidden one. */
+  onConfirm: () => void;
 };
 
-export function OwnerListingCard({ property, status, onView, onEdit }: Props) {
+export function OwnerListingCard({ property, status, hidesOn, onView, onEdit, onConfirm }: Props) {
   const badge = LISTING_STATUS_STYLE[status];
   const specs = listingSpecs(property).map((s) => s.text);
+  const hidden = status === 'expired';
 
   return (
     <View style={styles.card}>
-      <Pressable onPress={onView} accessibilityRole="button" accessibilityLabel={`View ${property.title}`}>
-        <Image source={property.images[0]} style={styles.image} />
+      <Pressable
+        onPress={hidden ? onEdit : onView}
+        accessibilityRole="button"
+        accessibilityLabel={`View ${property.title}`}
+      >
+        <Image source={property.images[0]} style={[styles.image, hidden && styles.imageHidden]} />
         {property.images.length > 1 ? (
           <View style={styles.dots}>
             {property.images.map((_, i) => (
@@ -70,8 +79,32 @@ export function OwnerListingCard({ property, status, onView, onEdit }: Props) {
           {specs.join('  •  ')}
         </AppText>
 
+        {status === 'published' && hidesOn ? (
+          <View style={styles.line}>
+            <Ionicons name="time-outline" size={13} color={colors.textSecondary} />
+            <AppText variant="small" color="textSecondary" style={styles.specs}>
+              Visible until {shortDate(hidesOn)} ·{' '}
+            </AppText>
+            <Pressable onPress={onConfirm} hitSlop={8} accessibilityRole="button">
+              <AppText variant="small" style={styles.link}>
+                Still available?
+              </AppText>
+            </Pressable>
+          </View>
+        ) : null}
+
+        {hidden ? (
+          <AppText variant="small" color="textSecondary" style={styles.specs}>
+            Not confirmed in time, so tenants can't see it.
+          </AppText>
+        ) : null}
+
         <View style={styles.actions}>
-          <ActionButton icon="eye-outline" label="View" soft onPress={onView} />
+          {hidden ? (
+            <ActionButton icon="refresh" label="Renew" soft onPress={onConfirm} />
+          ) : (
+            <ActionButton icon="eye-outline" label="View" soft onPress={onView} />
+          )}
           <ActionButton icon="create-outline" label="Edit" onPress={onEdit} />
         </View>
       </View>
@@ -115,6 +148,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.white,
   },
   image: { width: 116, height: 136, borderRadius: radius.md },
+  imageHidden: { opacity: 0.5 },
   dots: { position: 'absolute', bottom: 6, left: 8, flexDirection: 'row', gap: 4 },
   dot: { width: 6, height: 6, borderRadius: 3, backgroundColor: 'rgba(255,255,255,0.6)' },
   dotActive: { backgroundColor: colors.white },
@@ -134,6 +168,7 @@ const styles = StyleSheet.create({
   flex: { flex: 1 },
   rent: { fontSize: 17, lineHeight: 22, fontWeight: '800', color: colors.primaryDeep },
   specs: { fontWeight: '400', fontSize: 12 },
+  link: { fontSize: 12, fontWeight: '700', color: colors.primary },
   actions: { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.xs },
   action: {
     flex: 1,
